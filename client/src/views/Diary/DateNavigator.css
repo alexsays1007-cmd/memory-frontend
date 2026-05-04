@@ -1,0 +1,59 @@
+.date-navigator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.date-nav-btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-tertiary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.date-nav-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-active);
+}
+
+.date-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.date-select {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  background-color: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  text-align: center;
+  appearance: none;
+}
+
+@media (max-width: 640px) {
+  .date-navigator {
+    flex-wrap: wrap;
+  }
+
+  .date-select {
+    order: -1;
+    width: 100%;
+    margin-bottom: var(--space-2);
+  }
+}

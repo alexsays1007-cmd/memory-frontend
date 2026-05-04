@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# build output
+client/dist/
+dist/
+build/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# sqlite database
+*.db
+*.sqlite
+*.sqlite3
+
+# logs
+*.log
+logs/
+
+# system files
+.DS_Store
+Thumbs.db
