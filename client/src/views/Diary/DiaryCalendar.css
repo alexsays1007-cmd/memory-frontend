@@ -1,0 +1,202 @@
+.diary-calendar-popover {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: diaryFadeIn 0.2s ease-out;
+}
+
+.diary-calendar-panel {
+  background-color: var(--surface-elevated, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 360px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: diarySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.diary-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.cal-view-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  font-family: var(--font-title);
+}
+
+.cal-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.cal-nav-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.cal-nav-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cal-grid-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: var(--space-2) var(--space-2) 0;
+  text-align: center;
+}
+
+.cal-grid-weekdays span {
+  font-size: 10px;
+  color: var(--text-subtle, var(--text-muted));
+  font-weight: var(--font-medium);
+  padding: 8px 0;
+}
+
+.cal-grid-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 0 var(--space-2) var(--space-3);
+  gap: 2px;
+}
+
+.cal-day-cell {
+  aspect-ratio: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  color: var(--text-main);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.cal-day-cell:not(.empty):hover {
+  background-color: var(--surface-soft);
+}
+
+.cal-day-cell.has-entry {
+  font-weight: var(--font-medium);
+  color: var(--accent);
+}
+
+.cal-day-cell.selected {
+  background-color: var(--accent);
+  color: var(--bg) !important;
+}
+
+.cal-day-cell.selected .entry-dot {
+  background-color: var(--bg);
+}
+
+.entry-dot {
+  width: 4px;
+  height: 4px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 6px;
+}
+
+.cal-day-cell:not(.has-entry) {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.cal-footer {
+  border-top: 1px solid var(--border-light);
+  background-color: var(--surface-soft);
+}
+
+.jump-list-toggle {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+}
+
+.jump-list-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-normal);
+}
+
+.jump-list-content {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+
+.jump-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-size: var(--text-xs);
+  transition: all var(--transition-fast);
+}
+
+.jump-item:hover {
+  background-color: var(--surface);
+}
+
+.jump-item.active {
+  background-color: var(--accent-softer);
+  color: var(--accent-text);
+  font-weight: var(--font-medium);
+}
+
+.jump-count {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+@keyframes diaryFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes diarySlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

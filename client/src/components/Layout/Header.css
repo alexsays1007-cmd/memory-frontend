@@ -1,0 +1,78 @@
+.app-header {
+  padding: var(--spacing-page-mobile);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.brand-mark-placeholder {
+  width: 40px;
+  height: 40px;
+  color: var(--riven);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-mark-placeholder svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-family: var(--font-title);
+  font-size: var(--text-2xl);
+  font-weight: normal;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.1;
+  font-style: italic;
+}
+
+.brand-subtitle {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.header-slogan {
+  font-family: var(--font-title);
+  font-style: italic;
+  font-size: var(--text-sm);
+  color: var(--riven-muted);
+  writing-mode: horizontal-tb;
+  align-self: center;
+  padding-right: var(--space-2);
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+  }
+  
+  .header-brand {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .header-slogan {
+    padding-right: 0;
+  }
+}

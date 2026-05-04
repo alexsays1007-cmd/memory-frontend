@@ -24,10 +24,9 @@ logs/
 
 # system files
 .DS_Store
-Thumbs.dbclient/package-lock.json
-server/package-lock.json package-lock.json
-client/package-lock.json
-server/package-lock.json
+Thumbs.db
+
+# lock files
 package-lock.json
 client/package-lock.json
 server/package-lock.json

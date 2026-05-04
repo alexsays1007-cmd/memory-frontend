@@ -15,15 +15,13 @@ export default function DateNavigator({ dates, currentDate, onDateChange }) {
     }
   };
 
-  const formatDate = (dateStr) => {
+  const formatMonthYear = (dateStr) => {
     if (!dateStr) return '';
     try {
       const date = new Date(dateStr + 'T00:00:00');
-      return date.toLocaleDateString('zh-CN', {
-        year: 'numeric',
+      return date.toLocaleDateString('en-US', {
         month: 'long',
-        day: 'numeric',
-        weekday: 'long',
+        year: 'numeric'
       });
     } catch {
       return dateStr;
@@ -32,33 +30,31 @@ export default function DateNavigator({ dates, currentDate, onDateChange }) {
 
   return (
     <div className="date-navigator">
-      <button
-        className="date-nav-btn"
-        onClick={goToPrev}
-        disabled={currentIndex >= dates.length - 1}
-      >
-        ← Prev
-      </button>
+      <div className="nav-pill">
+        <button
+          className="date-nav-btn"
+          onClick={goToPrev}
+          disabled={currentIndex >= dates.length - 1}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
 
-      <select
-        className="date-select"
-        value={currentDate || ''}
-        onChange={(e) => onDateChange(e.target.value)}
-      >
-        {dates.map(date => (
-          <option key={date} value={date}>
-            {formatDate(date)}
-          </option>
-        ))}
-      </select>
+        <span className="current-month">
+          {formatMonthYear(currentDate)}
+        </span>
 
-      <button
-        className="date-nav-btn"
-        onClick={goToNext}
-        disabled={currentIndex <= 0}
-      >
-        Next →
-      </button>
+        <button
+          className="date-nav-btn"
+          onClick={goToNext}
+          disabled={currentIndex <= 0}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

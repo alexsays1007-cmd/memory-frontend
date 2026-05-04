@@ -1,28 +1,70 @@
 .memories-page {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
 }
 
 .page-header {
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.page-title-wrap {
+  display: flex;
+  align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  color: var(--text-main);
+}
+
+.page-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
 }
 
 .page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
+  font-family: var(--font-title);
+  font-size: var(--text-xl);
+  font-weight: var(--font-medium);
+  margin: 0;
+  line-height: 1.2;
 }
 
-.page-count {
-  font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
+.page-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.advanced-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.advanced-filter-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.advanced-filter-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+  border-color: var(--riven-muted);
 }
 
 .memories-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  padding-bottom: var(--space-8);
 }

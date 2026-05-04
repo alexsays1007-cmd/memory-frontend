@@ -1,20 +1,35 @@
 .memory-card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: var(--spacing-card-p);
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
 }
 
 .memory-card:hover {
-  border-color: var(--color-accent-light);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.memory-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--accent);
+  opacity: 0.5;
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
 }
 
 .memory-content {
   font-size: var(--text-base);
   line-height: var(--leading-relaxed);
-  color: var(--color-text-primary);
+  color: var(--text-main);
   white-space: pre-wrap;
   word-break: break-word;
   margin-bottom: var(--space-4);
@@ -27,27 +42,64 @@
   margin-bottom: var(--space-4);
 }
 
-.memory-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border-light);
-}
-
-.memory-meta-item {
+.memory-tag-chip {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  background-color: var(--surface-soft);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   display: inline-flex;
   align-items: center;
 }
 
+.tag-prefix {
+  opacity: 0.5;
+  margin-right: 2px;
+}
+
+.memory-tag-chip.type-type {
+  background-color: var(--bg);
+  border-color: var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+}
+
+.memory-tag-chip.type-person {
+  background-color: var(--accent-softer);
+  color: var(--accent-text);
+  border-color: transparent;
+}
+
+.memory-tag-chip.type-topic {
+  background-color: var(--surface-soft);
+}
+
+.memory-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border);
+}
+
+.memory-meta-item {
+  display: flex;
+  align-items: center;
+}
+
 .meta-label {
-  color: var(--color-text-tertiary);
-  margin-right: var(--space-1);
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-right: 4px;
 }
 
 .memory-date {
   margin-left: auto;
-  color: var(--color-text-tertiary);
+  color: var(--text-muted);
+  opacity: 0.8;
 }

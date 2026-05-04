@@ -6,6 +6,14 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: var(--bg);
+  color: var(--text-main);
+}
+
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
@@ -15,16 +23,15 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding-top: var(--safe-area-top);
   padding-bottom: var(--safe-area-bottom);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -40,6 +47,8 @@ button {
 input, select, textarea {
   font-family: inherit;
   font-size: inherit;
+  color: var(--text-main);
+  background-color: var(--surface);
 }
 
 ::-webkit-scrollbar {

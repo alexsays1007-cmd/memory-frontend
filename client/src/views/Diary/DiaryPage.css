@@ -1,28 +1,105 @@
 .diary-page {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.page-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-main);
+}
+
+.page-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.page-title {
+  font-family: var(--font-title);
+  font-size: var(--text-xl);
+  font-weight: var(--font-medium);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.calendar-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.calendar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.calendar-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+  border-color: var(--riven-muted);
+}
+
+.diary-paper-decoration {
+  height: 12px;
+  background-image: radial-gradient(circle at 10px 0, transparent 10px, var(--surface) 11px);
+  background-size: 24px 100%;
+  background-repeat: repeat-x;
+  background-position: top;
+  margin: 0 -16px; /* Bleed out of padding */
+  opacity: 0.5;
 }
 
 .diary-date-header {
   display: flex;
+  justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+  margin-top: var(--space-2);
 }
 
 .diary-date-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  margin: 0;
 }
 
 .diary-entry-count {
-  font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: var(--font-title);
 }
 
 .diary-entries {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  padding-bottom: var(--space-8);
 }
+
+

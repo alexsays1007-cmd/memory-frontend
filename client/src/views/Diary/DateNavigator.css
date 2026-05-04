@@ -1,59 +1,53 @@
 .date-navigator {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
-  padding: var(--space-4);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  padding: var(--space-2) 0;
+}
+
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 6px;
+  box-shadow: var(--shadow-sm);
 }
 
 .date-nav-btn {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-text-secondary);
-  background-color: var(--color-bg-tertiary);
+  background: transparent;
   border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
   transition: all var(--transition-fast);
-  white-space: nowrap;
+}
+
+.date-nav-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .date-nav-btn:hover:not(:disabled) {
-  color: var(--color-text-primary);
-  background-color: var(--color-surface-active);
+  background-color: var(--surface-soft);
+  color: var(--text-main);
 }
 
 .date-nav-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.date-select {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
+.current-month {
+  font-family: var(--font-title);
   font-size: var(--text-base);
-  font-weight: var(--font-medium);
-  color: var(--color-text-primary);
-  background-color: transparent;
-  border: none;
-  outline: none;
-  cursor: pointer;
+  color: var(--text-main);
+  padding: 0 16px;
+  min-width: 120px;
   text-align: center;
-  appearance: none;
-}
-
-@media (max-width: 640px) {
-  .date-navigator {
-    flex-wrap: wrap;
-  }
-
-  .date-select {
-    order: -1;
-    width: 100%;
-    margin-bottom: var(--space-2);
-  }
 }

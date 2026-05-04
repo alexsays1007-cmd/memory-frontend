@@ -5,40 +5,114 @@
   margin-bottom: var(--space-6);
 }
 
-.filter-row {
+.filter-search-container {
   display: flex;
-  gap: var(--space-3);
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 0 16px;
+  height: 48px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
 }
 
-.filter-search {
+.filter-search-container:focus-within {
+  border-color: var(--accent-text);
+  box-shadow: var(--shadow-md);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  margin-right: 12px;
+}
+
+.soft-search-input {
   flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--text-base);
+  color: var(--text-main);
+  outline: none;
 }
 
-.filter-selects {
+.soft-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.tags-scroller {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 8px; /* For scrollbar */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.tags-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.tag-chip {
+  white-space: nowrap;
+  padding: 6px 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.tag-chip:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.tag-chip.active {
+  background-color: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: transparent;
+  font-weight: var(--font-medium);
+}
+
+.advanced-filters-panel {
+  display: flex;
   flex-wrap: wrap;
+  gap: var(--space-4);
+  background-color: var(--surface-soft);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  animation: fadeDown 0.2s ease-out;
 }
 
 .filter-item {
+  flex: 1;
+  min-width: 120px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  min-width: 120px;
+  gap: 6px;
 }
 
 .filter-label {
   font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--color-text-tertiary);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding-left: 4px;
 }
 
-@media (max-width: 640px) {
-  .filter-selects {
-    flex-direction: column;
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
-
-  .filter-item {
-    min-width: 100%;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

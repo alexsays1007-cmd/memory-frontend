@@ -1,28 +1,45 @@
+import { formatTime } from '../../utils/date';
 import './TimelineItem.css';
 
 const actionColors = {
-  '叫醒': '#9B8EA8',
-  '巡逻': '#8CB89C',
-  '反思': '#E8C4A0',
-  '记录': '#8AACB8',
+  '叫醒': '#A296AC', // soft purple
+  '巡逻': '#9CBF9D', // soft green
+  '写入': '#8F9CA8', // blue-gray
+  '记录': '#8F9CA8', // blue-gray
+  '系统': '#B09E8C', // taupe-gold
+  '对话': '#C0A0A7', // dusty pink
   'default': '#B8B0B8',
 };
 
+/**
+ * Determine the buddy icon for a pulse log entry.
+ * 小烬 (buddy dragon) gets 🐾 for wake/patrol.
+ * Returns { icon, isBuddy } where isBuddy adds special styling.
+ */
+function getPulseIcon(item) {
+  const actor = (item.actor || item.agent || '').toLowerCase();
+  const isBuddy = actor.includes('小烬') || actor.includes('buddy');
+  const type = item.action_type;
+
+  // Buddy entries always get paw
+  if (isBuddy) return { icon: '🐾', isBuddy: true };
+
+  // Action type mapping
+  const iconMap = {
+    '巡逻': '🐾',
+    '叫醒': '🐾',
+    '写入': '✎',
+    '记录': '📋',
+    '系统': '✺',
+    '对话': '💬',
+  };
+
+  return { icon: iconMap[type] || null, isBuddy: false };
+}
+
 export default function TimelineItem({ item, isLast }) {
   const color = actionColors[item.action_type] || actionColors.default;
-
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
-  };
+  const { icon: pulseIcon, isBuddy } = getPulseIcon(item);
 
   const formatDuration = (minutes) => {
     if (!minutes) return '';
@@ -39,11 +56,15 @@ export default function TimelineItem({ item, isLast }) {
           className="timeline-dot"
           style={{ backgroundColor: color }}
         />
-        {!isLast && <div className="timeline-line" />}
       </div>
 
       <div className="timeline-content">
         <div className="timeline-header">
+          {pulseIcon && (
+            <span className={`pulse-icon ${isBuddy ? 'buddy' : ''}`} title={isBuddy ? '小烬' : item.action_type}>
+              {pulseIcon}
+            </span>
+          )}
           <span className="timeline-time">{formatTime(item.created_at)}</span>
           <span
             className="timeline-action-type"
@@ -51,6 +72,9 @@ export default function TimelineItem({ item, isLast }) {
           >
             {item.action_type}
           </span>
+          {item.actor && (
+            <span className="timeline-actor">{item.actor}</span>
+          )}
           {item.duration_minutes > 0 && (
             <span className="timeline-duration">
               {formatDuration(item.duration_minutes)}
@@ -59,7 +83,6 @@ export default function TimelineItem({ item, isLast }) {
         </div>
 
         <div className="timeline-body">
-          {item.emoji && <span className="timeline-emoji">{item.emoji}</span>}
           <p className="timeline-summary">{item.summary}</p>
         </div>
       </div>

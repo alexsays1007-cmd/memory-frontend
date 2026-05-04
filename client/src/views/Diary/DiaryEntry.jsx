@@ -1,18 +1,8 @@
+import { formatTime } from '../../utils/date';
 import './DiaryEntry.css';
 
 export default function DiaryEntry({ entry }) {
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
-  };
+
 
   return (
     <article className="diary-entry">

@@ -1,26 +1,9 @@
-import Tag from '../../components/common/Tag';
+import { formatDateTime } from '../../utils/date';
+import { parseTags } from '../../utils/tags';
 import './MemoryCard.css';
 
 export default function MemoryCard({ memory }) {
-  const tags = memory.tags
-    ? memory.tags.split(',').map(t => t.trim()).filter(Boolean)
-    : [];
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
+  const parsedTags = parseTags(memory.tags);
 
   return (
     <article className="memory-card">
@@ -28,10 +11,17 @@ export default function MemoryCard({ memory }) {
         {memory.content}
       </div>
 
-      {tags.length > 0 && (
+      {parsedTags.length > 0 && (
         <div className="memory-tags">
-          {tags.map(tag => (
-            <Tag key={tag}>{tag}</Tag>
+          {parsedTags.map((tagObj, idx) => (
+            <span 
+              key={idx} 
+              className={`memory-tag-chip type-${tagObj.type}`}
+            >
+              {tagObj.type === 'type' && <span className="tag-prefix">#</span>}
+              {tagObj.type === 'person' && <span className="tag-prefix">@</span>}
+              {tagObj.value}
+            </span>
           ))}
         </div>
       )}
@@ -48,7 +38,7 @@ export default function MemoryCard({ memory }) {
           </span>
         )}
         <span className="memory-meta-item memory-date">
-          {formatDate(memory.created)}
+          {formatDateTime(memory.created)}
         </span>
       </div>
     </article>
