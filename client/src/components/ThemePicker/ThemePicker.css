@@ -85,3 +85,15 @@
     transform: translateY(0);
   }
 }
+
+@media (max-width: 640px) {
+  .theme-picker-container {
+    bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom) + 16px);
+    right: 16px;
+  }
+  
+  .theme-picker-panel {
+    max-width: calc(100vw - 32px);
+    right: 0;
+  }
+}

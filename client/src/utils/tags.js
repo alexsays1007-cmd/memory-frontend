@@ -65,21 +65,18 @@ export function parseTags(tagsString) {
 }
 
 /**
- * Extracts top N tags from an array of raw tag objects returned by backend
- * @param {Array<{tag: string, count: number}>} backendTags 
+ * Extracts top N tags from an array of raw tag objects returned by backend or computed
+ * @param {Array<{tag: string, count: number}> | Array<string>} backendTags 
  * @param {number} topN 
  * @returns {Array<string>}
  */
 export function getTopTags(backendTags, topN = 8) {
   if (!backendTags || backendTags.length === 0) return [];
   
-  // backendTags might be array of strings or objects.
-  // Assuming it returns objects like { tag: '...', count: 5 } based on standard tag grouping queries,
-  // or just an array of strings if it's simpler.
   let tagCounts = {};
   
   backendTags.forEach(t => {
-    let rawTag = typeof t === 'string' ? t : t.tag || t.name;
+    let rawTag = typeof t === 'string' ? t : t.tag || t.name || t.value;
     let count = typeof t === 'string' ? 1 : t.count || 1;
     if (!rawTag) return;
     
@@ -97,4 +94,45 @@ export function getTopTags(backendTags, topN = 8) {
     .slice(0, topN);
     
   return sorted;
+}
+
+/**
+ * Computes filter options (tags, agents, channels) dynamically from a list of memories.
+ * Useful as a fallback when dedicated API endpoints are not available or return empty.
+ * @param {Array} memories 
+ * @returns {{ tags: Array<{tag: string, count: number}>, agents: Array<string>, channels: Array<string> }}
+ */
+export function getFilterOptionsFromMemories(memories) {
+  if (!memories || memories.length === 0) {
+    return { tags: [], agents: [], channels: [] };
+  }
+
+  const tagCounts = {};
+  const agents = new Set();
+  const channels = new Set();
+
+  memories.forEach(m => {
+    // Collect agents
+    if (m.agent) agents.add(m.agent);
+    
+    // Collect channels
+    if (m.channel) channels.add(m.channel);
+
+    // Collect and count tags
+    if (m.tags) {
+      const parsed = parseTags(m.tags);
+      parsed.forEach(p => {
+        const key = p.raw;
+        tagCounts[key] = (tagCounts[key] || 0) + 1;
+      });
+    }
+  });
+
+  const tags = Object.entries(tagCounts).map(([tag, count]) => ({ tag, count }));
+
+  return {
+    tags,
+    agents: Array.from(agents).sort(),
+    channels: Array.from(channels).sort(),
+  };
 }

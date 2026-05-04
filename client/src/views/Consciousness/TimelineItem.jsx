@@ -17,7 +17,7 @@ const actionColors = {
  * Returns { icon, isBuddy } where isBuddy adds special styling.
  */
 function getPulseIcon(item) {
-  const actor = (item.actor || item.agent || '').toLowerCase();
+  const actor = (item.actor || item.agent || item.source || '').toLowerCase();
   const isBuddy = actor.includes('小烬') || actor.includes('buddy');
   const type = item.action_type;
 
@@ -49,6 +49,9 @@ export default function TimelineItem({ item, isLast }) {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
+  // We group by date in ConsciousnessPage, but we still format time safely.
+  const displayTime = formatTime(item.created_at || item.created || item.timestamp);
+
   return (
     <div className="timeline-item">
       <div className="timeline-dot-wrapper">
@@ -65,7 +68,7 @@ export default function TimelineItem({ item, isLast }) {
               {pulseIcon}
             </span>
           )}
-          <span className="timeline-time">{formatTime(item.created_at)}</span>
+          <span className="timeline-time">{displayTime}</span>
           <span
             className="timeline-action-type"
             style={{ backgroundColor: color }}

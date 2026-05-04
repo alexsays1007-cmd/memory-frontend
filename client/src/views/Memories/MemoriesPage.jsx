@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMemories, getMemoryTags, getMemoryAgents, getMemoryChannels } from '../../api/memories';
+import { getFilterOptionsFromMemories, getTopTags } from '../../utils/tags';
 import MemoryCard from './MemoryCard';
 import MemoryFilters from './MemoryFilters';
 import EmptyState from '../../components/common/EmptyState';
@@ -47,6 +48,30 @@ export default function MemoriesPage() {
       const result = await getMemories(filters);
       setMemories(result.data);
       setTotal(result.total);
+
+      // Compute fallback options from real data and run diagnostics
+      setFilterOptions(prev => {
+        const computed = getFilterOptionsFromMemories(result.data);
+        const newTags = prev.tags && prev.tags.length > 0 ? prev.tags : computed.tags;
+        const newAgents = prev.agents && prev.agents.length > 0 ? prev.agents : computed.agents;
+        const newChannels = prev.channels && prev.channels.length > 0 ? prev.channels : computed.channels;
+
+        // Diagnostics logging
+        const isDebug = import.meta.env.DEV || localStorage.getItem('DEBUG_MEMORIES') === 'true';
+        if (isDebug) {
+          console.groupCollapsed('🔍 Memory Archive Diagnostics');
+          console.debug(`Memories count: ${result.data.length}`);
+          console.debug(`Raw tags count: ${computed.tags.length}`);
+          const parsedCount = computed.tags.reduce((acc, t) => acc + (t.count || 1), 0);
+          console.debug(`Parsed tags total usage: ${parsedCount}`);
+          console.debug(`Top tags:`, getTopTags(computed.tags, 8));
+          console.debug(`Agents:`, newAgents);
+          console.debug(`Channels:`, newChannels);
+          console.groupEnd();
+        }
+
+        return { tags: newTags, agents: newAgents, channels: newChannels };
+      });
     } catch (err) {
       console.error('Failed to fetch memories:', err);
     } finally {

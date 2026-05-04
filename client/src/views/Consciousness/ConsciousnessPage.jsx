@@ -29,6 +29,13 @@ export default function ConsciousnessPage() {
   
   const [showFilters, setShowFilters] = useState(false);
   const [tempFilters, setTempFilters] = useState(filters);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const getCreatedTime = (item) => {
+    const timeStr = item.created_at || item.created || item.timestamp;
+    return timeStr ? new Date(timeStr).getTime() : 0;
+  };
 
   // Load action types
   useEffect(() => {
@@ -42,8 +49,13 @@ export default function ConsciousnessPage() {
     setLoading(true);
     try {
       const result = await getConsciousnessLog(filters);
-      setLogs(result.data);
-      setTotal(result.total);
+      
+      // Frontend sorting: newest first
+      const sortedData = [...result.data].sort((a, b) => getCreatedTime(b) - getCreatedTime(a));
+      
+      setLogs(sortedData);
+      setTotal(sortedData.length || result.total);
+      setPage(1); // Reset page on filter change
     } catch (err) {
       console.error('Failed to fetch consciousness log:', err);
     } finally {
@@ -88,6 +100,38 @@ export default function ConsciousnessPage() {
     label: at,
     icon: ACTION_TYPE_ICONS[at] || '•',
   }));
+
+  // Pagination logic
+  const totalPages = Math.ceil(logs.length / pageSize);
+  const paginatedLogs = logs.slice((page - 1) * pageSize, page * pageSize);
+
+  // Date grouping logic
+  const renderGroupedLogs = () => {
+    let lastDate = null;
+    return paginatedLogs.map((item, index) => {
+      const timeStr = item.created_at || item.created || item.timestamp;
+      const dateObj = new Date(timeStr);
+      // Grouping format: YYYY年M月D日
+      const currentDate = !isNaN(dateObj) ? dateObj.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date';
+      
+      const isNewDate = currentDate !== lastDate;
+      lastDate = currentDate;
+
+      return (
+        <div key={item.id || index}>
+          {isNewDate && (
+            <div className="timeline-date-header">
+              {currentDate}
+            </div>
+          )}
+          <TimelineItem
+            item={item}
+            isLast={index === paginatedLogs.length - 1}
+          />
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="consciousness-page">
@@ -169,15 +213,33 @@ export default function ConsciousnessPage() {
       ) : logs.length === 0 ? (
         <EmptyState message="No consciousness logs found" icon="💭" />
       ) : (
-        <div className="timeline">
-          {logs.map((item, index) => (
-            <TimelineItem
-              key={item.id}
-              item={item}
-              isLast={index === logs.length - 1}
-            />
-          ))}
-        </div>
+        <>
+          <div className="timeline">
+            {renderGroupedLogs()}
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <button 
+                className="page-btn" 
+                disabled={page <= 1} 
+                onClick={() => setPage(p => p - 1)}
+              >
+                Previous
+              </button>
+              <span className="page-info">
+                第 {page} / {totalPages} 页
+              </span>
+              <button 
+                className="page-btn" 
+                disabled={page >= totalPages} 
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

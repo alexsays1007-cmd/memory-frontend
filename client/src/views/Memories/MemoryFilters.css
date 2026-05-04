@@ -116,3 +116,30 @@
     transform: translateY(0);
   }
 }
+
+@media (max-width: 640px) {
+  .memory-filters {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .filter-search-container {
+    height: 40px;
+    padding: 0 12px;
+  }
+
+  .search-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+  }
+
+  .soft-search-input {
+    font-size: var(--text-sm);
+  }
+  
+  .tag-chip {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+}
