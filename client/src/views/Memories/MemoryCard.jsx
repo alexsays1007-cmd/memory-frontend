@@ -3,9 +3,14 @@ import { formatDateTime } from '../../utils/date';
 import { parseTags } from '../../utils/tags';
 import './MemoryCard.css';
 
-export default function MemoryCard({ memory }) {
+export default function MemoryCard({ memory, onUpdate, onHide }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftContent, setDraftContent] = useState(memory.content || '');
+  const [draftTags, setDraftTags] = useState(memory.tags || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
   const contentRef = useRef(null);
 
   // Check if content is actually clamped
@@ -14,6 +19,45 @@ export default function MemoryCard({ memory }) {
       setIsClamped(contentRef.current.scrollHeight > contentRef.current.clientHeight);
     }
   }, [memory.content]);
+
+  useEffect(() => {
+    setDraftContent(memory.content || '');
+    setDraftTags(memory.tags || '');
+  }, [memory.content, memory.tags]);
+
+  const handleSave = async () => {
+    if (!draftContent.trim()) {
+      setError('Content is required');
+      return;
+    }
+    setIsSaving(true);
+    setError('');
+    try {
+      await onUpdate(memory.id, {
+        content: draftContent,
+        tags: draftTags,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message || 'Failed to save memory');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleHide = async () => {
+    if (!window.confirm('Hide this memory from the default view?')) {
+      return;
+    }
+    setIsSaving(true);
+    setError('');
+    try {
+      await onHide(memory.id);
+    } catch (err) {
+      setError(err.message || 'Failed to hide memory');
+      setIsSaving(false);
+    }
+  };
 
   let parsedTags = parseTags(memory.tags);
 
@@ -29,14 +73,37 @@ export default function MemoryCard({ memory }) {
 
   return (
     <article className="memory-card">
-      <div 
-        ref={contentRef}
-        className={`memory-content ${!isExpanded ? 'clamped' : ''}`}
-      >
-        {memory.content}
-      </div>
+      {isEditing ? (
+        <div className="memory-editor">
+          <label className="memory-editor-label">
+            Content
+            <textarea
+              className="memory-editor-textarea"
+              value={draftContent}
+              onChange={event => setDraftContent(event.target.value)}
+              rows={8}
+            />
+          </label>
+          <label className="memory-editor-label">
+            Tags
+            <input
+              className="memory-editor-input"
+              value={draftTags}
+              onChange={event => setDraftTags(event.target.value)}
+              placeholder="source:codex,type:fact"
+            />
+          </label>
+        </div>
+      ) : (
+        <div
+          ref={contentRef}
+          className={`memory-content ${!isExpanded ? 'clamped' : ''}`}
+        >
+          {memory.content}
+        </div>
+      )}
       
-      {!isExpanded && isClamped && (
+      {!isEditing && !isExpanded && isClamped && (
         <button 
           className="expand-toggle" 
           onClick={() => setIsExpanded(true)}
@@ -74,6 +141,53 @@ export default function MemoryCard({ memory }) {
         <span className="memory-meta-item memory-date">
           {formatDateTime(memory.created)}
         </span>
+      </div>
+
+      {error && (
+        <div className="memory-card-error">{error}</div>
+      )}
+
+      <div className="memory-actions">
+        {isEditing ? (
+          <>
+            <button
+              className="memory-action-btn primary"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              className="memory-action-btn"
+              onClick={() => {
+                setIsEditing(false);
+                setDraftContent(memory.content || '');
+                setDraftTags(memory.tags || '');
+                setError('');
+              }}
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              className="memory-action-btn"
+              onClick={() => setIsEditing(true)}
+              disabled={isSaving}
+            >
+              Edit
+            </button>
+            <button
+              className="memory-action-btn danger"
+              onClick={handleHide}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Hiding...' : 'Hide'}
+            </button>
+          </>
+        )}
       </div>
     </article>
   );

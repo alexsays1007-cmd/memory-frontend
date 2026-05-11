@@ -142,6 +142,90 @@
   opacity: 0.8;
 }
 
+.memory-editor {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.memory-editor-label {
+  display: grid;
+  gap: var(--space-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.memory-editor-textarea,
+.memory-editor-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated, var(--surface));
+  color: var(--text-main);
+  font: inherit;
+  line-height: var(--leading-relaxed);
+  padding: var(--space-3);
+}
+
+.memory-editor-textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.memory-card-error,
+.memory-action-error {
+  margin-top: var(--space-3);
+  color: #a6402d;
+  background: rgba(166, 64, 45, 0.08);
+  border: 1px solid rgba(166, 64, 45, 0.18);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.memory-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.memory-action-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated, var(--surface));
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  padding: 6px 12px;
+  transition: all var(--transition-fast);
+}
+
+.memory-action-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.memory-action-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast, #fff);
+}
+
+.memory-action-btn.danger:hover:not(:disabled) {
+  border-color: #a6402d;
+  color: #a6402d;
+}
+
+.memory-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 @media (max-width: 640px) {
   .memory-card {
     padding: 14px;
@@ -155,5 +239,13 @@
   .memory-meta {
     gap: var(--space-2);
     font-size: 10px;
+  }
+
+  .memory-actions {
+    justify-content: stretch;
+  }
+
+  .memory-action-btn {
+    flex: 1;
   }
 }

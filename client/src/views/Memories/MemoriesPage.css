@@ -68,3 +68,7 @@
   gap: var(--space-4);
   padding-bottom: var(--space-8);
 }
+
+.memory-action-error {
+  margin: var(--space-4) 0;
+}

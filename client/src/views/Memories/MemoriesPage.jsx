@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getMemories, getMemoryTags, getMemoryAgents, getMemoryChannels } from '../../api/memories';
+import { getMemories, getMemoryTags, getMemoryAgents, getMemoryChannels, hideMemory, updateMemory } from '../../api/memories';
 import { getFilterOptionsFromMemories, getTopTags } from '../../utils/tags';
 import MemoryCard from './MemoryCard';
 import MemoryFilters from './MemoryFilters';
@@ -25,6 +25,7 @@ export default function MemoriesPage() {
   });
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   // Load filter options
   useEffect(() => {
@@ -83,6 +84,23 @@ export default function MemoriesPage() {
     fetchMemories();
   }, [fetchMemories]);
 
+  const handleUpdateMemory = async (id, payload) => {
+    setActionError('');
+    await updateMemory(id, payload);
+    await fetchMemories();
+  };
+
+  const handleHideMemory = async (id) => {
+    setActionError('');
+    try {
+      await hideMemory(id);
+      await fetchMemories();
+    } catch (err) {
+      setActionError(err.message || 'Failed to hide memory');
+      throw err;
+    }
+  };
+
   return (
     <div className="memories-page">
       <div className="page-header">
@@ -122,6 +140,12 @@ export default function MemoriesPage() {
         {...filterOptions}
       />
 
+      {actionError && (
+        <div className="memory-action-error">
+          {actionError}
+        </div>
+      )}
+
       {loading ? (
         <LoadingSpinner />
       ) : memories.length === 0 ? (
@@ -129,7 +153,12 @@ export default function MemoriesPage() {
       ) : (
         <div className="memories-list">
           {memories.map(memory => (
-            <MemoryCard key={memory.id} memory={memory} />
+            <MemoryCard
+              key={memory.id}
+              memory={memory}
+              onUpdate={handleUpdateMemory}
+              onHide={handleHideMemory}
+            />
           ))}
         </div>
       )}

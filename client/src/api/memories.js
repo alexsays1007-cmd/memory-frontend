@@ -1,4 +1,4 @@
-import { fetchApi } from './client.js';
+import { fetchApi, requestApi } from './client.js';
 import { mockMemories, mockTags, mockAgents, mockChannels } from '../fixtures/mockMemories.js';
 
 const useMocks = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
@@ -47,4 +47,32 @@ export function getMemoryChannels() {
     return Promise.resolve({ channels: mockChannels });
   }
   return fetchApi('/memories/channels');
+}
+
+export function updateMemory(id, payload) {
+  if (useMocks) {
+    return Promise.resolve({ ok: true, memory: { id, ...payload } });
+  }
+  return requestApi(`/memories/${id}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function hideMemory(id) {
+  if (useMocks) {
+    return Promise.resolve({ ok: true, id, deleted: 1 });
+  }
+  return requestApi(`/memories/${id}/hide`, {
+    method: 'POST',
+  });
+}
+
+export function restoreMemory(id) {
+  if (useMocks) {
+    return Promise.resolve({ ok: true, memory: { id, deleted: 0 } });
+  }
+  return requestApi(`/memories/${id}/restore`, {
+    method: 'POST',
+  });
 }

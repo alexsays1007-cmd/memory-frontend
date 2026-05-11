@@ -27,17 +27,36 @@ let db;
 
 export function getDb() {
   if (!db) {
-    db = new Database(dbPath, { readonly: true });
+    db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
+    ensureMigrations(db);
   }
   return db;
+}
+
+function columnExists(instance, table, column) {
+  return instance.prepare(`PRAGMA table_info(${table})`).all().some(row => row.name === column);
+}
+
+function addColumnIfMissing(instance, table, column, definition) {
+  if (!columnExists(instance, table, column)) {
+    instance.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  }
+}
+
+function ensureMigrations(instance) {
+  addColumnIfMissing(instance, 'memories', 'deleted', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(instance, 'memories', 'deleted_at', 'TEXT');
+  addColumnIfMissing(instance, 'memories', 'deleted_by', 'TEXT');
+  addColumnIfMissing(instance, 'memories', 'updated', 'TEXT');
+  instance.prepare('CREATE INDEX IF NOT EXISTS idx_memories_deleted ON memories(deleted)').run();
 }
 
 export function getDbInfo() {
   const instance = getDb();
   return {
     path: dbPath,
-    readonly: true,
+    readonly: false,
     memoryCount: instance.prepare('SELECT COUNT(*) AS total FROM memories').get().total,
     diaryCount: instance.prepare('SELECT COUNT(*) AS total FROM diary').get().total,
     consciousnessCount: instance.prepare('SELECT COUNT(*) AS total FROM consciousness_log').get().total,
