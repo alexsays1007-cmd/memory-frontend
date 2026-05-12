@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import memoriesRouter from './routes/memories.js';
 import diaryRouter from './routes/diary.js';
 import consciousnessRouter from './routes/consciousness.js';
+import rawMessagesRouter from './routes/rawMessages.js';
 import { closeDb, getDbInfo } from './db/index.js';
 
 const app = express();
@@ -60,6 +61,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/memories', memoriesRouter);
 app.use('/api/diary', diaryRouter);
 app.use('/api/consciousness', consciousnessRouter);
+app.use('/api/raw-messages', rawMessagesRouter);
 
 if (hasClientDist) {
   app.use(express.static(clientDistPath));

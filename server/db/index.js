@@ -25,6 +25,12 @@ const dbPath = resolveDbPath(process.env.DB_PATH);
 
 let db;
 
+function tableExists(instance, table) {
+  return Boolean(
+    instance.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)
+  );
+}
+
 export function getDb() {
   if (!db) {
     db = new Database(dbPath);
@@ -50,16 +56,32 @@ function ensureMigrations(instance) {
   addColumnIfMissing(instance, 'memories', 'deleted_by', 'TEXT');
   addColumnIfMissing(instance, 'memories', 'updated', 'TEXT');
   instance.prepare('CREATE INDEX IF NOT EXISTS idx_memories_deleted ON memories(deleted)').run();
+
+  if (tableExists(instance, 'raw_messages')) {
+    addColumnIfMissing(instance, 'raw_messages', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
+    addColumnIfMissing(instance, 'raw_messages', 'hidden', 'INTEGER NOT NULL DEFAULT 0');
+    addColumnIfMissing(instance, 'raw_messages', 'updated', 'TEXT');
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_created ON raw_messages(created)').run();
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_channel ON raw_messages(channel)').run();
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_role ON raw_messages(role)').run();
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_session ON raw_messages(session)').run();
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_favorite ON raw_messages(favorite)').run();
+    instance.prepare('CREATE INDEX IF NOT EXISTS idx_raw_messages_hidden ON raw_messages(hidden)').run();
+  }
 }
 
 export function getDbInfo() {
   const instance = getDb();
+  const rawMessagesCount = tableExists(instance, 'raw_messages')
+    ? instance.prepare('SELECT COUNT(*) AS total FROM raw_messages').get().total
+    : 0;
   return {
     path: dbPath,
     readonly: false,
     memoryCount: instance.prepare('SELECT COUNT(*) AS total FROM memories').get().total,
     diaryCount: instance.prepare('SELECT COUNT(*) AS total FROM diary').get().total,
     consciousnessCount: instance.prepare('SELECT COUNT(*) AS total FROM consciousness_log').get().total,
+    rawMessagesCount,
   };
 }
 
