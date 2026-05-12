@@ -86,15 +86,20 @@ export default function MemoriesPage() {
 
   const handleUpdateMemory = async (id, payload) => {
     setActionError('');
-    await updateMemory(id, payload);
-    await fetchMemories();
+    const result = await updateMemory(id, payload);
+    if (result.memory) {
+      setMemories(current =>
+        current.map(memory => memory.id === id ? result.memory : memory)
+      );
+    }
   };
 
   const handleHideMemory = async (id) => {
     setActionError('');
     try {
       await hideMemory(id);
-      await fetchMemories();
+      setMemories(current => current.filter(memory => memory.id !== id));
+      setTotal(current => Math.max(0, current - 1));
     } catch (err) {
       setActionError(err.message || 'Failed to hide memory');
       throw err;
