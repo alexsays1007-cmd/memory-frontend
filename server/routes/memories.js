@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getDb } from '../db/index.js';
+import { requireMemoryWriteAccess } from '../middleware/writeAuth.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -112,7 +113,7 @@ router.get('/', (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireMemoryWriteAccess, async (req, res) => {
   try {
     const id = Number.parseInt(req.params.id, 10);
     const { content, tags } = req.body || {};
@@ -137,7 +138,7 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/hide', (req, res) => {
+router.post('/:id/hide', requireMemoryWriteAccess, (req, res) => {
   try {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id) || id <= 0) {
@@ -161,7 +162,7 @@ router.post('/:id/hide', (req, res) => {
   }
 });
 
-router.post('/:id/restore', (req, res) => {
+router.post('/:id/restore', requireMemoryWriteAccess, (req, res) => {
   try {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id) || id <= 0) {
