@@ -130,6 +130,10 @@
   align-items: center;
 }
 
+.memory-id {
+  font-variant-numeric: tabular-nums;
+}
+
 .meta-label {
   color: var(--text-muted);
   opacity: 0.7;

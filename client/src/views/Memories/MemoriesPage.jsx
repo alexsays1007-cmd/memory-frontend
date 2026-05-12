@@ -1,11 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getMemories, getMemoryTags, getMemoryAgents, getMemoryChannels, hideMemory, updateMemory } from '../../api/memories';
+import {
+  createMemory,
+  getMemories,
+  getMemoryTags,
+  getMemoryAgents,
+  getMemoryChannels,
+  hideMemory,
+  updateMemory,
+} from '../../api/memories';
 import { getFilterOptionsFromMemories, getTopTags } from '../../utils/tags';
 import MemoryCard from './MemoryCard';
 import MemoryFilters from './MemoryFilters';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './MemoriesPage.css';
+
+const DEFAULT_NEW_MEMORY = {
+  content: '',
+  tags: 'source:manual,type:fact',
+  agent: 'velvy',
+  channel: 'frontend',
+};
 
 export default function MemoriesPage() {
   const [memories, setMemories] = useState([]);
@@ -26,8 +41,10 @@ export default function MemoriesPage() {
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newMemory, setNewMemory] = useState(DEFAULT_NEW_MEMORY);
+  const [isCreating, setIsCreating] = useState(false);
 
-  // Load filter options
   useEffect(() => {
     Promise.all([
       getMemoryTags(),
@@ -42,7 +59,6 @@ export default function MemoriesPage() {
     }).catch(console.error);
   }, []);
 
-  // Load memories
   const fetchMemories = useCallback(async () => {
     setLoading(true);
     try {
@@ -50,24 +66,22 @@ export default function MemoriesPage() {
       setMemories(result.data);
       setTotal(result.total);
 
-      // Compute fallback options from real data and run diagnostics
       setFilterOptions(prev => {
         const computed = getFilterOptionsFromMemories(result.data);
         const newTags = prev.tags && prev.tags.length > 0 ? prev.tags : computed.tags;
         const newAgents = prev.agents && prev.agents.length > 0 ? prev.agents : computed.agents;
         const newChannels = prev.channels && prev.channels.length > 0 ? prev.channels : computed.channels;
 
-        // Diagnostics logging
         const isDebug = import.meta.env.DEV || localStorage.getItem('DEBUG_MEMORIES') === 'true';
         if (isDebug) {
-          console.groupCollapsed('🔍 Memory Archive Diagnostics');
+          console.groupCollapsed('Memory Archive Diagnostics');
           console.debug(`Memories count: ${result.data.length}`);
           console.debug(`Raw tags count: ${computed.tags.length}`);
           const parsedCount = computed.tags.reduce((acc, t) => acc + (t.count || 1), 0);
           console.debug(`Parsed tags total usage: ${parsedCount}`);
-          console.debug(`Top tags:`, getTopTags(computed.tags, 8));
-          console.debug(`Agents:`, newAgents);
-          console.debug(`Channels:`, newChannels);
+          console.debug('Top tags:', getTopTags(computed.tags, 8));
+          console.debug('Agents:', newAgents);
+          console.debug('Channels:', newChannels);
           console.groupEnd();
         }
 
@@ -83,6 +97,38 @@ export default function MemoriesPage() {
   useEffect(() => {
     fetchMemories();
   }, [fetchMemories]);
+
+  const handleCreateFieldChange = (field, value) => {
+    setNewMemory(current => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleCreateMemory = async (event) => {
+    event.preventDefault();
+    setActionError('');
+
+    if (!newMemory.content.trim()) {
+      setActionError('Content is required');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const result = await createMemory(newMemory);
+      if (result.memory) {
+        setMemories(current => [result.memory, ...current]);
+        setTotal(current => current + 1);
+      }
+      setNewMemory(DEFAULT_NEW_MEMORY);
+      setShowCreateForm(false);
+    } catch (err) {
+      setActionError(err.message || 'Failed to create memory');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleUpdateMemory = async (id, payload) => {
     setActionError('');
@@ -116,27 +162,77 @@ export default function MemoriesPage() {
           </svg>
           <div>
             <h1 className="page-title">记忆档案</h1>
-            <span className="page-subtitle">MEMORIES</span>
+            <span className="page-subtitle">MEMORIES · {total} 条</span>
           </div>
         </div>
-        <button 
-          className="advanced-filter-btn"
-          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="4" y1="21" x2="4" y2="14"></line>
-            <line x1="4" y1="10" x2="4" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12" y2="3"></line>
-            <line x1="20" y1="21" x2="20" y2="16"></line>
-            <line x1="20" y1="12" x2="20" y2="3"></line>
-            <line x1="1" y1="14" x2="7" y2="14"></line>
-            <line x1="9" y1="8" x2="15" y2="8"></line>
-            <line x1="17" y1="16" x2="23" y2="16"></line>
-          </svg>
-          筛选
-        </button>
+        <div className="page-actions">
+          <button
+            className="advanced-filter-btn"
+            onClick={() => setShowCreateForm(value => !value)}
+          >
+            {showCreateForm ? '取消新增' : '新增记忆'}
+          </button>
+          <button
+            className="advanced-filter-btn"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            筛选
+          </button>
+        </div>
       </div>
+
+      {showCreateForm && (
+        <form className="new-memory-form" onSubmit={handleCreateMemory}>
+          <label className="new-memory-label">
+            正文
+            <textarea
+              value={newMemory.content}
+              onChange={event => handleCreateFieldChange('content', event.target.value)}
+              rows={6}
+              placeholder="写一条你想让我记住的记忆..."
+            />
+          </label>
+          <div className="new-memory-grid">
+            <label className="new-memory-label">
+              标签
+              <input
+                value={newMemory.tags}
+                onChange={event => handleCreateFieldChange('tags', event.target.value)}
+              />
+            </label>
+            <label className="new-memory-label">
+              Agent
+              <input
+                value={newMemory.agent}
+                onChange={event => handleCreateFieldChange('agent', event.target.value)}
+              />
+            </label>
+            <label className="new-memory-label">
+              Channel
+              <input
+                value={newMemory.channel}
+                onChange={event => handleCreateFieldChange('channel', event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="new-memory-actions">
+            <button className="advanced-filter-btn create-submit" type="submit" disabled={isCreating}>
+              {isCreating ? '保存中...' : '保存记忆'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <MemoryFilters
         filters={filters}
@@ -154,7 +250,7 @@ export default function MemoriesPage() {
       {loading ? (
         <LoadingSpinner />
       ) : memories.length === 0 ? (
-        <EmptyState message="No memories found" icon="🍂" />
+        <EmptyState message="No memories found" icon="archive" />
       ) : (
         <div className="memories-list">
           {memories.map(memory => (

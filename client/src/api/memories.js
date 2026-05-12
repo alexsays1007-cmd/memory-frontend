@@ -49,6 +49,26 @@ export function getMemoryChannels() {
   return fetchApi('/memories/channels');
 }
 
+export function createMemory(payload) {
+  if (useMocks) {
+    return Promise.resolve({
+      ok: true,
+      memory: {
+        id: Date.now(),
+        created: new Date().toISOString(),
+        agent: payload.agent || 'velvy',
+        channel: payload.channel || 'frontend',
+        tags: payload.tags || 'source:manual,type:fact',
+        content: payload.content,
+      },
+    });
+  }
+  return requestApi('/memories', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 export function updateMemory(id, payload) {
   if (useMocks) {
     return Promise.resolve({ ok: true, memory: { id, ...payload } });

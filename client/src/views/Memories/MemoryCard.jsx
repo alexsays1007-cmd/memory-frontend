@@ -128,6 +128,9 @@ export default function MemoryCard({ memory, onUpdate, onHide }) {
       )}
 
       <div className="memory-meta">
+        <span className="memory-meta-item memory-id">
+          <span className="meta-label">ID:</span> {memory.id}
+        </span>
         {memory.agent && (
           <span className="memory-meta-item">
             <span className="meta-label">Agent:</span> {memory.agent}

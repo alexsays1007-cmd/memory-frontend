@@ -113,6 +113,43 @@ router.get('/', (req, res) => {
   }
 });
 
+router.post('/', requireMemoryWriteAccess, async (req, res) => {
+  try {
+    const {
+      content,
+      tags = 'source:manual,type:fact',
+      agent = 'velvy',
+      channel = 'frontend',
+    } = req.body || {};
+
+    if (typeof content !== 'string' || content.trim() === '') {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+    if (typeof tags !== 'string') {
+      return res.status(400).json({ error: 'Tags must be a string' });
+    }
+    if (typeof agent !== 'string' || agent.trim() === '') {
+      return res.status(400).json({ error: 'Agent is required' });
+    }
+    if (typeof channel !== 'string' || channel.trim() === '') {
+      return res.status(400).json({ error: 'Channel is required' });
+    }
+
+    const result = await runMemoryAdmin('create-memory', {
+      content,
+      tags,
+      agent,
+      channel,
+    });
+    const db = getDb();
+    const memory = db.prepare('SELECT * FROM memories WHERE id = ?').get(result.id);
+    res.status(201).json({ ok: true, memory, vectorRefreshed: result.vectorRefreshed });
+  } catch (err) {
+    console.error('Error creating memory:', err);
+    res.status(err.status || 500).json({ error: err.message || 'Failed to create memory' });
+  }
+});
+
 router.patch('/:id', requireMemoryWriteAccess, async (req, res) => {
   try {
     const id = Number.parseInt(req.params.id, 10);

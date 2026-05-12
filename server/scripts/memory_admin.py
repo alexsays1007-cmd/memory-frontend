@@ -46,7 +46,7 @@ def connect(db_path: str) -> sqlite3.Connection:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["update-memory"])
+    parser.add_argument("command", choices=["create-memory", "update-memory"])
     parser.add_argument("--db", default=os.environ.get("MCP_MEMORY_DB") or os.environ.get("DB_PATH"))
     parser.add_argument(
         "--mcp-dir",
@@ -59,6 +59,55 @@ def main() -> int:
         fail("database path is required")
 
     payload = load_payload()
+
+    if args.command == "create-memory":
+        content = payload.get("content")
+        tags = payload.get("tags", "source:manual,type:fact")
+        agent = payload.get("agent", "velvy")
+        channel = payload.get("channel", "frontend")
+
+        if not isinstance(content, str) or not content.strip():
+            fail("content is required")
+        if not isinstance(tags, str):
+            tags = str(tags)
+        if not isinstance(agent, str) or not agent.strip():
+            agent = "velvy"
+        if not isinstance(channel, str) or not channel.strip():
+            channel = "frontend"
+
+        with connect(args.db) as conn:
+            cur = conn.execute(
+                "INSERT INTO memories(content, tags, agent, channel, created) VALUES(?,?,?,?,?)",
+                (content, tags, agent.strip(), channel.strip(), now_iso()),
+            )
+            memory_id = cur.lastrowid
+
+        mcp_dir = Path(args.mcp_dir)
+        if str(mcp_dir) not in sys.path:
+            sys.path.insert(0, str(mcp_dir))
+        os.environ["MCP_MEMORY_DB"] = args.db
+
+        try:
+            from vector_search import save_embedding
+
+            save_embedding(memory_id, content)
+        except Exception as exc:
+            fail(f"memory created but vector refresh failed: {type(exc).__name__}: {exc}")
+
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "id": memory_id,
+                    "tags": tags,
+                    "agent": agent.strip(),
+                    "channel": channel.strip(),
+                    "vectorRefreshed": True,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 0
 
     if args.command == "update-memory":
         memory_id = int(payload.get("id") or 0)
