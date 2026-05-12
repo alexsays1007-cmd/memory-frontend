@@ -3,6 +3,7 @@ import AppLayout from './components/Layout/AppLayout';
 import MemoriesPage from './views/Memories/MemoriesPage';
 import DiaryPage from './views/Diary/DiaryPage';
 import ConsciousnessPage from './views/Consciousness/ConsciousnessPage';
+import RawMessagesPage from './views/RawMessages/RawMessagesPage';
 
 export default function App() {
   return (
@@ -12,8 +13,10 @@ export default function App() {
           <Route index element={<MemoriesPage />} />
           <Route path="diary" element={<DiaryPage />} />
           <Route path="consciousness" element={<ConsciousnessPage />} />
+          <Route path="stream" element={<RawMessagesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
+

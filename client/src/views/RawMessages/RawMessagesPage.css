@@ -1,0 +1,331 @@
+/* ================================================
+   Raw Messages Page – "对话流" Stream View
+   ================================================ */
+.raw-messages-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: calc(var(--space-8) + 80px); /* safe area for bottom nav */
+}
+
+/* Page Header */
+.raw-messages-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.raw-messages-page .page-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-main);
+}
+
+.raw-messages-page .page-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.raw-messages-page .page-title {
+  font-family: var(--font-title);
+  font-size: var(--text-xl);
+  font-weight: var(--font-medium);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.raw-messages-page .page-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+/* ================================================
+   Toolbar
+   ================================================ */
+.stream-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background-color: var(--bg);
+  padding-bottom: var(--space-3);
+  margin: 0 calc(var(--spacing-page-mobile) * -1);
+  padding-left: var(--spacing-page-mobile);
+  padding-right: var(--spacing-page-mobile);
+  padding-top: var(--space-2);
+}
+
+/* Search */
+.stream-search-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 0 14px;
+  height: 40px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.stream-search-container:focus-within {
+  border-color: var(--accent-text);
+  box-shadow: var(--shadow-md);
+}
+
+.stream-search-container .search-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.stream-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--text-sm);
+  color: var(--text-main);
+  outline: none;
+  min-width: 0;
+}
+
+.stream-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.search-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.search-clear:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+/* Chips Row */
+.stream-chips-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.stream-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.channel-chips {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.stream-controls {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.stream-chip {
+  white-space: nowrap;
+  padding: 5px 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stream-chip:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.stream-chip.active {
+  background-color: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: transparent;
+  font-weight: var(--font-medium);
+}
+
+.fav-chip svg {
+  flex-shrink: 0;
+}
+
+/* Date button */
+.stream-date-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.stream-date-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.stream-date-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+/* Date Picker Strip */
+.stream-date-picker {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.stream-date-picker::-webkit-scrollbar {
+  display: none;
+}
+
+.date-chip {
+  white-space: nowrap;
+  padding: 4px 10px;
+  background-color: var(--surface-soft);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-chip:hover {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+.date-chip.active {
+  background-color: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: transparent;
+}
+
+.date-chip-count {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* Search hint */
+.stream-search-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0;
+  font-style: italic;
+}
+
+/* ================================================
+   Message List Area
+   ================================================ */
+.stream-messages {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+/* Pagination / Load More */
+.stream-pagination {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+}
+
+.stream-load-more {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 8px 20px;
+  font-size: var(--text-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.stream-load-more:hover {
+  background-color: var(--surface-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.stream-loading-text,
+.stream-end-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ================================================
+   Mobile Adjustments
+   ================================================ */
+@media (max-width: 640px) {
+  .stream-toolbar {
+    gap: var(--space-2);
+  }
+
+  .stream-search-container {
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .stream-chip {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .stream-date-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .raw-messages-page .page-title {
+    font-size: var(--text-lg);
+  }
+}

@@ -1,0 +1,228 @@
+/* ================================================
+   Message Bubble – Chat-like layout
+   ================================================ */
+
+.msg-row {
+  display: flex;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.msg-row.msg-user {
+  justify-content: flex-end;
+}
+
+.msg-row.msg-assistant {
+  justify-content: flex-start;
+}
+
+.msg-bubble {
+  max-width: 72%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  position: relative;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+/* User bubble – right aligned, warm accent tint */
+.msg-user .msg-bubble {
+  background-color: var(--accent-softer);
+  border: 1px solid var(--accent-soft);
+  border-bottom-right-radius: 6px;
+  color: var(--text-main);
+}
+
+/* Assistant bubble – left aligned, neutral surface */
+.msg-assistant .msg-bubble {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 6px;
+  color: var(--text-main);
+}
+
+/* Text and clamping */
+.msg-text {
+  overflow-wrap: break-word;
+}
+
+.msg-text.msg-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 12;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.msg-expand {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  padding: 4px 0;
+  cursor: pointer;
+  font-weight: var(--font-medium);
+  margin-top: 4px;
+}
+
+.msg-expand:hover {
+  text-decoration: underline;
+}
+
+/* Footer: meta + actions */
+.msg-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.msg-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.8;
+}
+
+.msg-meta-sep {
+  opacity: 0.4;
+}
+
+.msg-source {
+  font-weight: var(--font-medium);
+  letter-spacing: 0.02em;
+}
+
+/* Action buttons */
+.msg-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.msg-row:hover .msg-actions {
+  opacity: 1;
+}
+
+.msg-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.msg-action-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--accent);
+}
+
+.msg-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.msg-action-btn.favorited {
+  color: var(--accent);
+}
+
+/* Copy toast */
+.msg-toast {
+  position: absolute;
+  bottom: -24px;
+  right: 0;
+  background-color: var(--surface-elevated, var(--surface));
+  color: var(--accent);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  pointer-events: none;
+  animation: toastFade 1.6s ease-out forwards;
+  z-index: 10;
+}
+
+.msg-user .msg-toast {
+  right: 0;
+  left: auto;
+}
+.msg-assistant .msg-toast {
+  left: 0;
+  right: auto;
+}
+
+@keyframes toastFade {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ================================================
+   Date Separator
+   ================================================ */
+.date-separator {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px;
+}
+
+.date-separator-pill {
+  background-color: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  letter-spacing: 0.02em;
+}
+
+/* ================================================
+   System line (hidden by default, toggled in advanced)
+   ================================================ */
+.msg-system-line {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-subtle, var(--text-muted));
+  padding: 6px 16px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ================================================
+   Mobile
+   ================================================ */
+@media (max-width: 640px) {
+  .msg-bubble {
+    max-width: 82%;
+    font-size: 14px;
+    padding: 9px 12px;
+  }
+
+  .msg-actions {
+    opacity: 1; /* Always show on mobile */
+  }
+
+  .msg-action-btn {
+    width: 22px;
+    height: 22px;
+  }
+
+  .msg-action-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+}
