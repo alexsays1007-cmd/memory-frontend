@@ -8,6 +8,11 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './RawMessagesPage.css';
 
 const PAGE_SIZE = 50;
+const SOURCE_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'wechat', label: 'WeChat' },
+  { value: 'telegram', label: 'Telegram' },
+];
 
 export default function RawMessagesPage() {
   const [messages, setMessages] = useState([]);
@@ -24,6 +29,7 @@ export default function RawMessagesPage() {
   const [favOnly, setFavOnly] = useState(false);
   const [channels, setChannels] = useState([]);
   const [dateSummary, setDateSummary] = useState([]);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -37,8 +43,23 @@ export default function RawMessagesPage() {
   // Fetch channels on mount
   useEffect(() => {
     getRawMessageChannels()
-      .then(res => setChannels(res.channels || []))
+      .then(res => {
+        const apiChannels = res.channels || [];
+        const merged = Array.from(new Set([...apiChannels, 'wechat', 'telegram']));
+        setChannels(merged);
+      })
       .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    const updateScrollButton = () => {
+      const distanceToBottom = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
+      setShowScrollBottom(distanceToBottom > 600);
+    };
+
+    updateScrollButton();
+    window.addEventListener('scroll', updateScrollButton, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollButton);
   }, []);
 
   // Fetch dates when channel changes (for date picker)
@@ -78,6 +99,12 @@ export default function RawMessagesPage() {
         setMessages(prev => [...data, ...prev]);
       } else {
         setMessages(data);
+        window.setTimeout(() => {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'auto',
+          });
+        }, 0);
       }
       setTotal(result.total || 0);
       setPage(pageNum);
@@ -105,8 +132,21 @@ export default function RawMessagesPage() {
   };
 
   const clearSearch = () => {
+    clearTimeout(searchTimer.current);
     setSearchInput('');
     setSearchQ('');
+  };
+
+  const handleDateInput = (event) => {
+    setSelectedDate(event.target.value);
+    setShowDatePicker(false);
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth',
+    });
   };
 
   // Load earlier (older messages)
@@ -208,19 +248,26 @@ export default function RawMessagesPage() {
         {/* Chips Row: channel + date + fav */}
         <div className="stream-chips-row">
           <div className="channel-chips">
-            <button
-              className={`stream-chip ${!channel ? 'active' : ''}`}
-              onClick={() => setChannel('')}
-            >All</button>
-            {channels.map(ch => (
+            {SOURCE_OPTIONS.map(option => (
               <button
-                key={ch}
-                className={`stream-chip ${channel === ch ? 'active' : ''}`}
-                onClick={() => setChannel(ch)}
+                key={option.value || 'all'}
+                className={`stream-chip ${channel === option.value ? 'active' : ''}`}
+                onClick={() => setChannel(option.value)}
               >
-                {ch === 'telegram' ? 'Telegram' : ch === 'wechat' ? 'WeChat' : ch}
+                {option.label}
               </button>
             ))}
+            {channels
+              .filter(ch => !SOURCE_OPTIONS.some(option => option.value === ch))
+              .map(ch => (
+                <button
+                  key={ch}
+                  className={`stream-chip ${channel === ch ? 'active' : ''}`}
+                  onClick={() => setChannel(ch)}
+                >
+                  {ch}
+                </button>
+              ))}
           </div>
 
           <div className="stream-controls">
@@ -252,6 +299,13 @@ export default function RawMessagesPage() {
         {/* Quick date picker */}
         {showDatePicker && (
           <div className="stream-date-picker">
+            <input
+              className="stream-date-input"
+              type="date"
+              value={selectedDate}
+              onChange={handleDateInput}
+              aria-label="选择日期"
+            />
             <button
               className={`date-chip ${!selectedDate ? 'active' : ''}`}
               onClick={() => { setSelectedDate(''); setShowDatePicker(false); }}
@@ -302,6 +356,15 @@ export default function RawMessagesPage() {
           </>
         )}
       </div>
+
+      {showScrollBottom && (
+        <button className="scroll-bottom-btn" onClick={scrollToBottom} aria-label="回到底部">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14"/>
+            <path d="M19 12l-7 7-7-7"/>
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

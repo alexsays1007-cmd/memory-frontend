@@ -5,6 +5,7 @@ import { requireMemoryWriteAccess } from '../middleware/writeAuth.js';
 const router = Router();
 const MAX_PAGE_SIZE = 300;
 const DEFAULT_PAGE_SIZE = 100;
+const LOCAL_DATE_EXPR = "date(replace(substr(created, 1, 19), 'T', ' '), '+8 hours')";
 
 function nowIso() {
   return new Date().toISOString();
@@ -53,7 +54,7 @@ function buildWhere(query) {
   }
 
   if (query.date) {
-    where.push('substr(created, 1, 10) = @date');
+    where.push(`${LOCAL_DATE_EXPR} = @date`);
     params.date = String(query.date);
   }
 
@@ -62,8 +63,8 @@ function buildWhere(query) {
   }
 
   if (query.q) {
-    where.push('(content LIKE @q OR IFNULL(raw_json, "") LIKE @q)');
-    params.q = `%${String(query.q)}%`;
+    where.push('(content LIKE @q COLLATE NOCASE OR IFNULL(raw_json, "") LIKE @q COLLATE NOCASE)');
+    params.q = `%${String(query.q).trim()}%`;
   }
 
   return {
@@ -175,7 +176,7 @@ router.get('/dates', (req, res) => {
     const rows = db
       .prepare(
         `
-        SELECT substr(created, 1, 10) AS date, COUNT(*) AS total
+        SELECT ${LOCAL_DATE_EXPR} AS date, COUNT(*) AS total
         FROM raw_messages
         WHERE ${where.join(' AND ')}
         GROUP BY date

@@ -220,6 +220,24 @@
   scrollbar-width: none;
 }
 
+.stream-date-input {
+  flex: 0 0 auto;
+  min-width: 132px;
+  padding: 4px 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-main);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.stream-date-input:focus {
+  border-color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
+}
+
 .stream-date-picker::-webkit-scrollbar {
   display: none;
 }
@@ -302,6 +320,36 @@
   font-style: italic;
 }
 
+.scroll-bottom-btn {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(92px + var(--safe-area-bottom));
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--accent);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  z-index: calc(var(--z-sticky) + 1);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.scroll-bottom-btn:hover {
+  transform: translateY(2px);
+  background-color: var(--surface);
+}
+
+.scroll-bottom-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
 /* ================================================
    Mobile Adjustments
    ================================================ */
@@ -323,6 +371,18 @@
   .stream-date-btn {
     padding: 4px 8px;
     font-size: 11px;
+  }
+
+  .stream-date-input {
+    min-width: 124px;
+    font-size: 11px;
+  }
+
+  .scroll-bottom-btn {
+    right: 16px;
+    bottom: calc(86px + var(--safe-area-bottom));
+    width: 38px;
+    height: 38px;
   }
   
   .raw-messages-page .page-title {
