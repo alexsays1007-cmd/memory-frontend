@@ -255,39 +255,45 @@
    Quick Date Chips Panel
    ================================================ */
 .stream-date-chips-panel {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   padding: 8px 0 4px;
 }
 
 .stream-qchip {
   white-space: nowrap;
-  padding: 5px 12px;
+  padding: 7px 0;
   background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-main);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
 }
 
 .stream-qchip:hover {
-  background-color: var(--surface-soft);
-  color: var(--text-main);
   border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .stream-qchip.active {
-  background-color: var(--accent-soft);
-  color: var(--accent-text);
+  background-color: var(--accent) !important;
+  color: var(--bg) !important;
   border-color: transparent;
   font-weight: var(--font-medium);
 }
+
+/* heat levels for chips */
+.stream-qchip.qchip-heat-1 { background-color: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.stream-qchip.qchip-heat-2 { background-color: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+.stream-qchip.qchip-heat-3 { background-color: color-mix(in srgb, var(--accent) 32%, var(--surface)); }
+.stream-qchip.qchip-heat-4 { background-color: color-mix(in srgb, var(--accent) 48%, var(--surface)); color: var(--bg); }
 
 .stream-qchip-count {
   font-size: 10px;
@@ -298,6 +304,7 @@
   color: var(--accent-text);
   border-style: dashed;
   font-weight: var(--font-medium);
+  background-color: transparent;
 }
 
 .stream-qchip-more:hover {

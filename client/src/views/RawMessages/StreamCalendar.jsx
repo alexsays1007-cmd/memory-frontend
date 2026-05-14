@@ -95,7 +95,8 @@ export default function StreamCalendar({
   });
 
   /* ---- drill handlers ---- */
-  const handleTitleClick = () => setDrill('year');
+  const handleTitleClick = () => setDrill(drill === 'month' ? 'calendar' : 'month');
+  const handleYearClick = () => setDrill(drill === 'year' ? 'month' : 'year');
 
   const handleYearPick = (y) => {
     setViewMonth(p => ({ ...p, year: y }));
@@ -189,16 +190,36 @@ export default function StreamCalendar({
             </button>
           )}
 
-          <button className="sc-title-btn" onClick={handleTitleClick}>
-            {drill === 'calendar' && monthLabel}
-            {drill === 'year' && '选择年份'}
-            {drill === 'month' && `${viewMonth.year}年 · 选择月份`}
+          <div className="sc-title-group">
             {drill === 'calendar' && (
-              <svg className="sc-title-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
+              <>
+                <button className="sc-title-btn sc-year-btn" onClick={handleYearClick}>
+                  {viewMonth.year}年
+                </button>
+                <button className="sc-title-btn sc-month-btn" onClick={handleTitleClick}>
+                  {viewMonth.month + 1}月
+                  <svg className="sc-title-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </>
             )}
-          </button>
+            {drill === 'year' && (
+              <span className="sc-title-label">选择年份</span>
+            )}
+            {drill === 'month' && (
+              <>
+                <button className="sc-title-btn sc-year-btn" onClick={handleYearClick}>
+                  {viewMonth.year}年
+                  <svg className="sc-title-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                <span className="sc-title-sep">·</span>
+                <span className="sc-title-label">选择月份</span>
+              </>
+            )}
+          </div>
 
           {drill === 'calendar' && (
             <button className="sc-nav" onClick={nextMonth} aria-label="下个月">

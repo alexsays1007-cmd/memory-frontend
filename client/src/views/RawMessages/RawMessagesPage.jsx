@@ -33,6 +33,15 @@ function getLocalDayUtcRange(dateString) {
   };
 }
 
+function chipHeatClass(count, max) {
+  if (!count || max <= 0) return '';
+  const ratio = count / max;
+  if (ratio >= 0.7) return 'qchip-heat-4';
+  if (ratio >= 0.4) return 'qchip-heat-3';
+  if (ratio >= 0.15) return 'qchip-heat-2';
+  return 'qchip-heat-1';
+}
+
 function getLocalRangeUtc(startDate, endDate) {
   const start = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
@@ -368,23 +377,27 @@ export default function RawMessagesPage() {
         </div>
       </div>
 
-      {showDateChips && !showDatePicker && (
-        <div className="stream-date-chips-panel">
-          {dateSummary.slice(0, 7).map(d => (
-            <button
-              key={d.date}
-              className={`stream-qchip ${selectedDate === d.date ? 'active' : ''}`}
-              onClick={() => handleChipDateClick(d.date)}
-            >
-              {d.date.slice(5).replace('-', '/')}
-              <span className="stream-qchip-count">{d.total}</span>
+      {showDateChips && !showDatePicker && (() => {
+        const recentDates = dateSummary.slice(0, 7);
+        const chipMax = recentDates.length ? Math.max(...recentDates.map(d => d.total)) : 0;
+        return (
+          <div className="stream-date-chips-panel">
+            {recentDates.map(d => (
+              <button
+                key={d.date}
+                className={`stream-qchip ${chipHeatClass(d.total, chipMax)} ${selectedDate === d.date ? 'active' : ''}`}
+                onClick={() => handleChipDateClick(d.date)}
+              >
+                {d.date.slice(5).replace('-', '/')}
+                <span className="stream-qchip-count">{d.total}</span>
+              </button>
+            ))}
+            <button className="stream-qchip stream-qchip-more" onClick={openFullCalendar}>
+              更多日期...
             </button>
-          ))}
-          <button className="stream-qchip stream-qchip-more" onClick={openFullCalendar}>
-            更多日期...
-          </button>
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {showDatePicker && (
         <StreamCalendar

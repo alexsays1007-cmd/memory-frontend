@@ -129,10 +129,16 @@
   height: 18px;
 }
 
-.sc-title-btn {
+.sc-title-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+}
+
+.sc-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
   border: none;
   background: transparent;
   font-size: var(--text-sm);
@@ -140,19 +146,39 @@
   color: var(--text-main);
   font-family: var(--font-title);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 3px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  line-height: 1;
 }
 
 .sc-title-btn:hover {
   background-color: var(--surface-soft);
 }
 
-.sc-title-chevron {
-  width: 14px;
-  height: 14px;
+.sc-year-btn {
   color: var(--text-muted);
+}
+
+.sc-title-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-family: var(--font-title);
+  line-height: 1;
+}
+
+.sc-title-sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+  margin: 0 2px;
+  line-height: 1;
+}
+
+.sc-title-chevron {
+  width: 11px;
+  height: 11px;
+  color: var(--text-muted);
+  margin-left: 1px;
 }
 
 /* ---- Year / Month picker grids ---- */
