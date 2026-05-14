@@ -3,7 +3,7 @@ import { getRawMessages, getRawMessageChannels, getRawMessageDates } from '../..
 import { getMessageCreated, isSystemOrHidden } from '../../utils/message';
 import { parseToLocalDate } from '../../utils/date';
 import MessageBubble from './MessageBubble';
-import DiaryCalendar from '../Diary/DiaryCalendar';
+import StreamCalendar from './StreamCalendar';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './RawMessagesPage.css';
@@ -33,6 +33,16 @@ function getLocalDayUtcRange(dateString) {
   };
 }
 
+function getLocalRangeUtc(startDate, endDate) {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  end.setDate(end.getDate() + 1);
+  return {
+    startUtc: start.toISOString(),
+    endUtc: end.toISOString(),
+  };
+}
+
 export default function RawMessagesPage() {
   const [messages, setMessages] = useState([]);
   const [total, setTotal] = useState(0);
@@ -44,6 +54,9 @@ export default function RawMessagesPage() {
   const [searchQ, setSearchQ] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
+  const [dateMode, setDateMode] = useState('single');
   const [favOnly, setFavOnly] = useState(false);
   const [channels, setChannels] = useState([]);
   const [dateSummary, setDateSummary] = useState([]);
@@ -71,7 +84,6 @@ export default function RawMessagesPage() {
       const distanceToBottom = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
       setShowScrollBottom(distanceToBottom > 600);
     };
-
     updateScrollButton();
     window.addEventListener('scroll', updateScrollButton, { passive: true });
     return () => window.removeEventListener('scroll', updateScrollButton);
@@ -79,8 +91,7 @@ export default function RawMessagesPage() {
 
   useEffect(() => {
     const tz = getBrowserTimezone();
-    const params = { channel: channel || undefined, tz };
-    getRawMessageDates(params)
+    getRawMessageDates({ channel: channel || undefined, tz })
       .then(res => setDateSummary(res.dates || []))
       .catch(console.error);
   }, [channel]);
@@ -93,14 +104,18 @@ export default function RawMessagesPage() {
     };
     if (channel) params.channel = channel;
     if (searchQ) params.q = searchQ;
-    if (selectedDate) {
+    if (dateMode === 'single' && selectedDate) {
       const { startUtc, endUtc } = getLocalDayUtcRange(selectedDate);
+      params.startUtc = startUtc;
+      params.endUtc = endUtc;
+    } else if (dateMode === 'range' && rangeStart && rangeEnd) {
+      const { startUtc, endUtc } = getLocalRangeUtc(rangeStart, rangeEnd);
       params.startUtc = startUtc;
       params.endUtc = endUtc;
     }
     if (favOnly) params.favorite = 1;
     return params;
-  }, [channel, searchQ, selectedDate, favOnly]);
+  }, [channel, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly]);
 
   const fetchMessages = useCallback(async (pageNum = 1, loadEarlier = false) => {
     if (loadEarlier) setLoadingMore(true);
@@ -109,7 +124,6 @@ export default function RawMessagesPage() {
     try {
       const result = await getRawMessages(buildParams(pageNum));
       const data = (result.data || []).slice().reverse();
-
       if (loadEarlier) {
         setMessages(prev => [...data, ...prev]);
       } else {
@@ -144,12 +158,19 @@ export default function RawMessagesPage() {
     setSearchQ('');
   };
 
-  const handleCalendarDateChange = (dateStr) => {
-    setSelectedDate(prev => prev === dateStr ? '' : dateStr);
+  const handleDateSelect = (dateStr) => {
+    setSelectedDate(dateStr);
   };
 
-  const clearDate = () => {
+  const handleRangeSelect = (start, end) => {
+    setRangeStart(start || '');
+    setRangeEnd(end || '');
+  };
+
+  const clearAllDates = () => {
     setSelectedDate('');
+    setRangeStart('');
+    setRangeEnd('');
     setShowDatePicker(false);
   };
 
@@ -211,6 +232,10 @@ export default function RawMessagesPage() {
   };
 
   const calendarDates = dateSummary.map(d => d.date);
+  const calendarDateCounts = dateSummary.reduce((acc, d) => {
+    acc[d.date] = d.total;
+    return acc;
+  }, {});
   const calendarMonthGroups = dateSummary.reduce((acc, d) => {
     const ym = d.date.slice(0, 7);
     if (!acc[ym]) acc[ym] = [];
@@ -218,10 +243,18 @@ export default function RawMessagesPage() {
     return acc;
   }, {});
 
-  const formatSelectedDate = (dateStr) => {
-    if (!dateStr) return null;
-    const d = new Date(`${dateStr}T12:00:00`);
-    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  const hasDateFilter = (dateMode === 'single' && selectedDate)
+    || (dateMode === 'range' && rangeStart && rangeEnd);
+
+  const formatDateLabel = () => {
+    if (dateMode === 'single' && selectedDate) {
+      const d = new Date(`${selectedDate}T12:00:00`);
+      return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    }
+    if (dateMode === 'range' && rangeStart && rangeEnd) {
+      return `${rangeStart.slice(5).replace('-', '/')}~${rangeEnd.slice(5).replace('-', '/')}`;
+    }
+    return '日期';
   };
 
   return (
@@ -286,7 +319,7 @@ export default function RawMessagesPage() {
           <div className="stream-controls">
             <div className="stream-date-wrapper">
               <button
-                className={`stream-date-btn ${selectedDate ? 'has-date' : ''}`}
+                className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
                 onClick={() => setShowDatePicker(!showDatePicker)}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -295,10 +328,10 @@ export default function RawMessagesPage() {
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                {selectedDate ? formatSelectedDate(selectedDate) : '日期'}
+                {formatDateLabel()}
               </button>
-              {selectedDate && (
-                <button className="stream-date-clear" onClick={clearDate}>
+              {hasDateFilter && (
+                <button className="stream-date-clear" onClick={clearAllDates}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
@@ -317,14 +350,20 @@ export default function RawMessagesPage() {
             </button>
           </div>
         </div>
-
       </div>
 
       {showDatePicker && (
-        <DiaryCalendar
+        <StreamCalendar
           dates={calendarDates}
-          currentDate={selectedDate}
-          onDateChange={handleCalendarDateChange}
+          dateCounts={calendarDateCounts}
+          selectedDate={selectedDate}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          mode={dateMode}
+          onModeChange={setDateMode}
+          onDateSelect={handleDateSelect}
+          onRangeSelect={handleRangeSelect}
+          onClear={clearAllDates}
           onClose={() => setShowDatePicker(false)}
           monthGroups={calendarMonthGroups}
         />
