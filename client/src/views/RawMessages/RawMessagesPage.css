@@ -250,108 +250,6 @@
   background-color: color-mix(in srgb, var(--accent-soft) 80%, var(--accent-text) 20%);
 }
 
-/* ================================================
-   Date Dropdown (soft panel)
-   ================================================ */
-.stream-date-dropdown {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
-  padding: 10px 12px;
-  box-shadow: var(--shadow-md);
-}
-
-.date-dropdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.date-dropdown-title {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: var(--font-medium);
-}
-
-.date-native-label {
-  position: relative;
-  cursor: pointer;
-}
-
-.date-native-input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.date-native-trigger {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background-color: var(--surface-soft);
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  color: var(--text-muted);
-  transition: all var(--transition-fast);
-}
-
-.date-native-trigger svg {
-  width: 12px;
-  height: 12px;
-}
-
-.date-native-label:hover .date-native-trigger {
-  background-color: var(--surface);
-  color: var(--text-main);
-}
-
-.date-native-input:focus + .date-native-trigger {
-  color: var(--accent-text);
-  box-shadow: 0 0 0 1px var(--accent-text);
-}
-
-.date-chips-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.date-chip-soft {
-  white-space: nowrap;
-  padding: 5px 11px;
-  background-color: var(--surface-soft);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.date-chip-soft:hover {
-  background-color: var(--surface);
-  border-color: var(--border);
-  color: var(--text-main);
-}
-
-.date-chip-soft.active {
-  background-color: var(--accent-soft);
-  color: var(--accent-text);
-  border-color: transparent;
-  font-weight: var(--font-medium);
-}
-
-.date-chip-count {
-  font-size: 10px;
-  opacity: 0.6;
-}
 
 /* Search hint */
 .stream-search-hint {
@@ -466,14 +364,5 @@
 
   .raw-messages-page .page-title {
     font-size: var(--text-lg);
-  }
-
-  .stream-date-dropdown {
-    padding: 8px 10px;
-  }
-
-  .date-chip-soft {
-    padding: 4px 9px;
-    font-size: 11px;
   }
 }
