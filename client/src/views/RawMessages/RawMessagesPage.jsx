@@ -14,6 +14,24 @@ const SOURCE_OPTIONS = [
   { value: 'telegram', label: 'Telegram' },
 ];
 
+function getBrowserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
+function getLocalDayUtcRange(dateString) {
+  const start = new Date(`${dateString}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return {
+    startUtc: start.toISOString(),
+    endUtc: end.toISOString(),
+  };
+}
+
 export default function RawMessagesPage() {
   const [messages, setMessages] = useState([]);
   const [total, setTotal] = useState(0);
@@ -21,7 +39,6 @@ export default function RawMessagesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Filters
   const [channel, setChannel] = useState('');
   const [searchQ, setSearchQ] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -30,17 +47,15 @@ export default function RawMessagesPage() {
   const [channels, setChannels] = useState([]);
   const [dateSummary, setDateSummary] = useState([]);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
-
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const searchTimer = useRef(null);
+  const dateInputRef = useRef(null);
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => clearTimeout(searchTimer.current);
   }, []);
 
-  // Fetch channels on mount
   useEffect(() => {
     getRawMessageChannels()
       .then(res => {
@@ -62,14 +77,14 @@ export default function RawMessagesPage() {
     return () => window.removeEventListener('scroll', updateScrollButton);
   }, []);
 
-  // Fetch dates when channel changes (for date picker)
   useEffect(() => {
-    getRawMessageDates({ channel: channel || undefined })
+    const tz = getBrowserTimezone();
+    const params = { channel: channel || undefined, tz };
+    getRawMessageDates(params)
       .then(res => setDateSummary(res.dates || []))
       .catch(console.error);
   }, [channel]);
 
-  // Build request params — sort=desc so backend gives newest page first
   const buildParams = useCallback((pageNum) => {
     const params = {
       page: pageNum,
@@ -78,33 +93,27 @@ export default function RawMessagesPage() {
     };
     if (channel) params.channel = channel;
     if (searchQ) params.q = searchQ;
-    if (selectedDate) params.date = selectedDate;
+    if (selectedDate) {
+      const { startUtc, endUtc } = getLocalDayUtcRange(selectedDate);
+      params.startUtc = startUtc;
+      params.endUtc = endUtc;
+    }
     if (favOnly) params.favorite = 1;
     return params;
   }, [channel, searchQ, selectedDate, favOnly]);
 
-  // Main fetch
-  // Backend returns newest-first (desc). We reverse to display old→new (chat order).
-  // "Load earlier" fetches the next desc page and prepends older messages.
   const fetchMessages = useCallback(async (pageNum = 1, loadEarlier = false) => {
     if (loadEarlier) setLoadingMore(true);
     else setLoading(true);
 
     try {
       const result = await getRawMessages(buildParams(pageNum));
-      const data = (result.data || []).slice().reverse(); // reverse desc→asc for display
+      const data = (result.data || []).slice().reverse();
 
       if (loadEarlier) {
-        // Prepend older messages before current ones
         setMessages(prev => [...data, ...prev]);
       } else {
         setMessages(data);
-        window.setTimeout(() => {
-          window.scrollTo({
-            top: document.documentElement.scrollHeight,
-            behavior: 'auto',
-          });
-        }, 0);
       }
       setTotal(result.total || 0);
       setPage(pageNum);
@@ -116,12 +125,10 @@ export default function RawMessagesPage() {
     }
   }, [buildParams]);
 
-  // Refetch when filters change
   useEffect(() => {
     fetchMessages(1);
   }, [fetchMessages]);
 
-  // Debounced search
   const handleSearchInput = (e) => {
     const val = e.target.value;
     setSearchInput(val);
@@ -137,8 +144,21 @@ export default function RawMessagesPage() {
     setSearchQ('');
   };
 
-  const handleDateInput = (event) => {
-    setSelectedDate(event.target.value);
+  const handleDateSelect = (dateStr) => {
+    setSelectedDate(dateStr);
+    setShowDatePicker(false);
+  };
+
+  const clearDate = () => {
+    setSelectedDate('');
+    setShowDatePicker(false);
+  };
+
+  const handleNativeDateChange = (e) => {
+    const val = e.target.value;
+    if (val) {
+      setSelectedDate(val);
+    }
     setShowDatePicker(false);
   };
 
@@ -149,7 +169,6 @@ export default function RawMessagesPage() {
     });
   };
 
-  // Load earlier (older messages)
   const hasMore = messages.length < total;
   const handleLoadEarlier = () => {
     if (!loadingMore && hasMore) {
@@ -157,10 +176,8 @@ export default function RawMessagesPage() {
     }
   };
 
-  // Update a single message (e.g., after fav toggle)
   const handleMessageUpdate = (updated) => {
     setMessages(prev => {
-      // In favorite-only mode, remove the message if it was just unfavorited
       if (favOnly && !updated.favorite) {
         return prev.filter(m => m.id !== updated.id);
       }
@@ -168,10 +185,8 @@ export default function RawMessagesPage() {
     });
   };
 
-  // Filter system/hidden on frontend
   const visibleMessages = messages.filter(m => !isSystemOrHidden(m));
 
-  // Group by date for separators
   const renderMessages = () => {
     let lastDateLabel = null;
     const items = [];
@@ -204,12 +219,16 @@ export default function RawMessagesPage() {
     return items;
   };
 
-  // Quick date chips (recent dates with data)
   const recentDates = dateSummary.slice(0, 7);
+
+  const formatSelectedDate = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T12:00:00`);
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className="raw-messages-page">
-      {/* Page Header */}
       <div className="page-header">
         <div className="page-title-wrap">
           <svg className="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -222,9 +241,7 @@ export default function RawMessagesPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="stream-toolbar">
-        {/* Search */}
         <div className="stream-search-container">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -245,7 +262,6 @@ export default function RawMessagesPage() {
           )}
         </div>
 
-        {/* Chips Row: channel + date + fav */}
         <div className="stream-chips-row">
           <div className="channel-chips">
             {SOURCE_OPTIONS.map(option => (
@@ -271,18 +287,27 @@ export default function RawMessagesPage() {
           </div>
 
           <div className="stream-controls">
-            <button
-              className="stream-date-btn"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              {selectedDate ? selectedDate.replace(/-/g, '/') : '日期'}
-            </button>
+            <div className="stream-date-wrapper">
+              <button
+                className={`stream-date-btn ${selectedDate ? 'has-date' : ''}`}
+                onClick={() => setShowDatePicker(!showDatePicker)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {selectedDate ? formatSelectedDate(selectedDate) : '日期'}
+              </button>
+              {selectedDate && (
+                <button className="stream-date-clear" onClick={clearDate}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
 
             <button
               className={`stream-chip fav-chip ${favOnly ? 'active' : ''}`}
@@ -296,42 +321,55 @@ export default function RawMessagesPage() {
           </div>
         </div>
 
-        {/* Quick date picker */}
         {showDatePicker && (
-          <div className="stream-date-picker">
-            <input
-              className="stream-date-input"
-              type="date"
-              value={selectedDate}
-              onChange={handleDateInput}
-              aria-label="选择日期"
-            />
-            <button
-              className={`date-chip ${!selectedDate ? 'active' : ''}`}
-              onClick={() => { setSelectedDate(''); setShowDatePicker(false); }}
-            >全部日期</button>
-            {recentDates.map(d => (
+          <div className="stream-date-dropdown">
+            <div className="date-dropdown-header">
+              <span className="date-dropdown-title">选择日期</span>
+              <label className="date-native-label">
+                <input
+                  ref={dateInputRef}
+                  className="date-native-input"
+                  type="date"
+                  value={selectedDate}
+                  onChange={handleNativeDateChange}
+                />
+                <span className="date-native-trigger">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  自选
+                </span>
+              </label>
+            </div>
+            <div className="date-chips-grid">
               <button
-                key={d.date}
-                className={`date-chip ${selectedDate === d.date ? 'active' : ''}`}
-                onClick={() => { setSelectedDate(d.date); setShowDatePicker(false); }}
-              >
-                {d.date.slice(5).replace('-', '/')}
-                <span className="date-chip-count">{d.total}</span>
-              </button>
-            ))}
+                className={`date-chip-soft ${!selectedDate ? 'active' : ''}`}
+                onClick={clearDate}
+              >全部</button>
+              {recentDates.map(d => (
+                <button
+                  key={d.date}
+                  className={`date-chip-soft ${selectedDate === d.date ? 'active' : ''}`}
+                  onClick={() => handleDateSelect(d.date)}
+                >
+                  {d.date.slice(5).replace('-', '/')}
+                  <span className="date-chip-count">{d.total}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Search result hint */}
       {searchQ && !loading && (
         <div className="stream-search-hint">
-          搜索 &quot;{searchQ}&quot; · {total} 条结果
+          搜索 &quot;{searchQ}&quot; &middot; {total} 条结果
         </div>
       )}
 
-      {/* Message List */}
       <div className="stream-messages">
         {loading ? (
           <LoadingSpinner />
@@ -339,7 +377,6 @@ export default function RawMessagesPage() {
           <EmptyState message="暂无对话消息" icon="💬" />
         ) : (
           <>
-            {/* Load Earlier (older messages prepend above) */}
             {hasMore && (
               <div className="stream-pagination stream-pagination-top">
                 {loadingMore ? (

@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-bottom: calc(var(--space-8) + 80px); /* safe area for bottom nav */
+  padding-bottom: calc(var(--space-8) + 80px);
 }
 
 /* Page Header */
@@ -184,7 +184,13 @@
   flex-shrink: 0;
 }
 
-/* Date button */
+/* Date button wrapper */
+.stream-date-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .stream-date-btn {
   display: flex;
   align-items: center;
@@ -210,43 +216,115 @@
   color: var(--text-main);
 }
 
-/* Date Picker Strip */
-.stream-date-picker {
-  display: flex;
-  gap: var(--space-2);
-  overflow-x: auto;
-  padding-bottom: 4px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.stream-date-btn.has-date {
+  background-color: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: transparent;
+  font-weight: var(--font-medium);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
-.stream-date-input {
-  flex: 0 0 auto;
-  min-width: 132px;
-  padding: 4px 10px;
+.stream-date-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  background-color: var(--accent-soft);
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--accent-text) 20%, transparent);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  color: var(--accent-text);
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.stream-date-clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+.stream-date-clear:hover {
+  background-color: color-mix(in srgb, var(--accent-soft) 80%, var(--accent-text) 20%);
+}
+
+/* ================================================
+   Date Dropdown (soft panel)
+   ================================================ */
+.stream-date-dropdown {
   background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  color: var(--text-main);
+  border-radius: var(--radius-lg, 12px);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.date-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.date-dropdown-title {
   font-size: 12px;
-  font-family: inherit;
-  outline: none;
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
 }
 
-.stream-date-input:focus {
-  border-color: var(--accent-text);
-  box-shadow: var(--shadow-sm);
+.date-native-label {
+  position: relative;
+  cursor: pointer;
 }
 
-.stream-date-picker::-webkit-scrollbar {
-  display: none;
+.date-native-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
-.date-chip {
-  white-space: nowrap;
+.date-native-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 10px;
   background-color: var(--surface-soft);
-  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.date-native-trigger svg {
+  width: 12px;
+  height: 12px;
+}
+
+.date-native-label:hover .date-native-trigger {
+  background-color: var(--surface);
+  color: var(--text-main);
+}
+
+.date-native-input:focus + .date-native-trigger {
+  color: var(--accent-text);
+  box-shadow: 0 0 0 1px var(--accent-text);
+}
+
+.date-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.date-chip-soft {
+  white-space: nowrap;
+  padding: 5px 11px;
+  background-color: var(--surface-soft);
+  border: 1px solid transparent;
   border-radius: var(--radius-full);
   font-size: 12px;
   color: var(--text-muted);
@@ -257,15 +335,17 @@
   gap: 4px;
 }
 
-.date-chip:hover {
+.date-chip-soft:hover {
   background-color: var(--surface);
   border-color: var(--border);
+  color: var(--text-main);
 }
 
-.date-chip.active {
+.date-chip-soft.active {
   background-color: var(--accent-soft);
   color: var(--accent-text);
   border-color: transparent;
+  font-weight: var(--font-medium);
 }
 
 .date-chip-count {
@@ -320,10 +400,14 @@
   font-style: italic;
 }
 
+/* ================================================
+   Scroll to Bottom Button
+   Positioned above ThemePicker (~76px on mobile)
+   ================================================ */
 .scroll-bottom-btn {
   position: fixed;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: calc(92px + var(--safe-area-bottom));
+  right: 24px;
+  bottom: 92px;
   width: 42px;
   height: 42px;
   border: 1px solid var(--border);
@@ -373,19 +457,23 @@
     font-size: 11px;
   }
 
-  .stream-date-input {
-    min-width: 124px;
-    font-size: 11px;
-  }
-
   .scroll-bottom-btn {
     right: 16px;
-    bottom: calc(86px + var(--safe-area-bottom));
+    bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom) + 16px + 64px);
     width: 38px;
     height: 38px;
   }
-  
+
   .raw-messages-page .page-title {
     font-size: var(--text-lg);
+  }
+
+  .stream-date-dropdown {
+    padding: 8px 10px;
+  }
+
+  .date-chip-soft {
+    padding: 4px 9px;
+    font-size: 11px;
   }
 }

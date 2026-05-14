@@ -3,9 +3,8 @@ import { getDb } from '../db/index.js';
 import { requireMemoryWriteAccess } from '../middleware/writeAuth.js';
 
 const router = Router();
-const MAX_PAGE_SIZE = 300;
-const DEFAULT_PAGE_SIZE = 100;
-const LOCAL_DATE_EXPR = "date(replace(substr(created, 1, 19), 'T', ' '), '+8 hours')";
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 50;
 
 function nowIso() {
   return new Date().toISOString();
@@ -23,6 +22,24 @@ function rawMessagesTableExists(db) {
   return Boolean(
     db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'raw_messages'").get()
   );
+}
+
+function getUtcOffsetString(tz) {
+  try {
+    const now = new Date();
+    const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
+    const tzStr = now.toLocaleString('en-US', { timeZone: tz });
+    const diffMinutes = (new Date(tzStr) - new Date(utcStr)) / 60000;
+    const sign = diffMinutes >= 0 ? '+' : '-';
+    const absMinutes = Math.abs(diffMinutes);
+    const hours = Math.floor(absMinutes / 60);
+    const mins = absMinutes % 60;
+    const result = `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    if (!/^[+-]\d{2}:\d{2}$/.test(result)) return '+00:00';
+    return result;
+  } catch {
+    return '+00:00';
+  }
 }
 
 function buildWhere(query) {
@@ -53,8 +70,18 @@ function buildWhere(query) {
     params.session = String(query.session);
   }
 
-  if (query.date) {
-    where.push(`${LOCAL_DATE_EXPR} = @date`);
+  if (query.startUtc) {
+    where.push('created >= @startUtc');
+    params.startUtc = String(query.startUtc);
+  }
+
+  if (query.endUtc) {
+    where.push('created < @endUtc');
+    params.endUtc = String(query.endUtc);
+  }
+
+  if (!query.startUtc && !query.endUtc && query.date) {
+    where.push("date(replace(substr(created, 1, 19), 'T', ' ')) = @date");
     params.date = String(query.date);
   }
 
@@ -63,7 +90,7 @@ function buildWhere(query) {
   }
 
   if (query.q) {
-    where.push('(content LIKE @q COLLATE NOCASE OR IFNULL(raw_json, "") LIKE @q COLLATE NOCASE)');
+    where.push("(content LIKE @q COLLATE NOCASE OR IFNULL(raw_json, '') LIKE @q COLLATE NOCASE)");
     params.q = `%${String(query.q).trim()}%`;
   }
 
@@ -159,7 +186,11 @@ router.get('/dates', (req, res) => {
       return res.json({ dates: [] });
     }
 
-    const where = ['created IS NOT NULL', 'created != ""'];
+    const tz = req.query.tz;
+    const offset = tz ? getUtcOffsetString(tz) : '+00:00';
+    const dateExpr = `date(replace(substr(created, 1, 19), 'T', ' '), '${offset}')`;
+
+    const where = ['created IS NOT NULL', "created != ''"];
     const params = {};
     if (req.query.channel) {
       where.push('channel = @channel');
@@ -176,7 +207,7 @@ router.get('/dates', (req, res) => {
     const rows = db
       .prepare(
         `
-        SELECT ${LOCAL_DATE_EXPR} AS date, COUNT(*) AS total
+        SELECT ${dateExpr} AS date, COUNT(*) AS total
         FROM raw_messages
         WHERE ${where.join(' AND ')}
         GROUP BY date
