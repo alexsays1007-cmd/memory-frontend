@@ -61,6 +61,7 @@ export default function RawMessagesPage() {
   const [channels, setChannels] = useState([]);
   const [dateSummary, setDateSummary] = useState([]);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [showDateChips, setShowDateChips] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const searchTimer = useRef(null);
@@ -171,7 +172,29 @@ export default function RawMessagesPage() {
     setSelectedDate('');
     setRangeStart('');
     setRangeEnd('');
+    setShowDateChips(false);
     setShowDatePicker(false);
+  };
+
+  const handleDateBtnClick = () => {
+    if (showDatePicker) {
+      setShowDatePicker(false);
+    } else {
+      setShowDateChips(!showDateChips);
+    }
+  };
+
+  const openFullCalendar = () => {
+    setShowDateChips(false);
+    setShowDatePicker(true);
+  };
+
+  const handleChipDateClick = (dateStr) => {
+    setDateMode('single');
+    setSelectedDate(dateStr);
+    setRangeStart('');
+    setRangeEnd('');
+    setShowDateChips(false);
   };
 
   const scrollToBottom = () => {
@@ -236,13 +259,6 @@ export default function RawMessagesPage() {
     acc[d.date] = d.total;
     return acc;
   }, {});
-  const calendarMonthGroups = dateSummary.reduce((acc, d) => {
-    const ym = d.date.slice(0, 7);
-    if (!acc[ym]) acc[ym] = [];
-    acc[ym].push(d.date);
-    return acc;
-  }, {});
-
   const hasDateFilter = (dateMode === 'single' && selectedDate)
     || (dateMode === 'range' && rangeStart && rangeEnd);
 
@@ -320,7 +336,7 @@ export default function RawMessagesPage() {
             <div className="stream-date-wrapper">
               <button
                 className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
-                onClick={() => setShowDatePicker(!showDatePicker)}
+                onClick={handleDateBtnClick}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -352,6 +368,24 @@ export default function RawMessagesPage() {
         </div>
       </div>
 
+      {showDateChips && !showDatePicker && (
+        <div className="stream-date-chips-panel">
+          {dateSummary.slice(0, 7).map(d => (
+            <button
+              key={d.date}
+              className={`stream-qchip ${selectedDate === d.date ? 'active' : ''}`}
+              onClick={() => handleChipDateClick(d.date)}
+            >
+              {d.date.slice(5).replace('-', '/')}
+              <span className="stream-qchip-count">{d.total}</span>
+            </button>
+          ))}
+          <button className="stream-qchip stream-qchip-more" onClick={openFullCalendar}>
+            更多日期...
+          </button>
+        </div>
+      )}
+
       {showDatePicker && (
         <StreamCalendar
           dates={calendarDates}
@@ -365,7 +399,6 @@ export default function RawMessagesPage() {
           onRangeSelect={handleRangeSelect}
           onClear={clearAllDates}
           onClose={() => setShowDatePicker(false)}
-          monthGroups={calendarMonthGroups}
         />
       )}
 
