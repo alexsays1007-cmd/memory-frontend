@@ -35,28 +35,28 @@ export default function ThemePicker() {
     setActiveTheme(themeId);
     applyTheme(themeId);
     localStorage.setItem('memory-archive-theme', themeId);
+    // Auto-close after brief delay so user sees the selection feedback
+    setTimeout(() => setIsOpen(false), 350);
   };
 
   return (
     <div className="theme-picker-container">
-      {isOpen && (
-        <div className="theme-picker-panel">
-          {themes.map(theme => (
-            <button
-              key={theme.id}
-              className={`theme-option ${activeTheme === theme.id ? 'active' : ''}`}
-              onClick={() => handleThemeChange(theme.id)}
-              title={theme.name}
-            >
-              <span 
-                className="theme-color-dot" 
-                style={{ backgroundColor: theme.color }}
-              />
-              <span className="theme-name">{theme.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className={`theme-picker-panel ${isOpen ? 'open' : ''}`}>
+        {themes.map(theme => (
+          <button
+            key={theme.id}
+            className={`theme-option ${activeTheme === theme.id ? 'active' : ''}`}
+            onClick={() => handleThemeChange(theme.id)}
+            title={theme.name}
+          >
+            <span
+              className="theme-color-dot"
+              style={{ backgroundColor: theme.color }}
+            />
+            <span className="theme-name">{theme.name}</span>
+          </button>
+        ))}
+      </div>
       <button 
         className="theme-picker-toggle" 
         onClick={() => setIsOpen(!isOpen)}

@@ -40,7 +40,16 @@
   flex-direction: column;
   gap: 8px;
   min-width: 160px;
-  animation: fadeUp 0.2s ease-out;
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.theme-picker-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .theme-option {
@@ -75,16 +84,7 @@
   border: 1px solid var(--border-strong);
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* fadeUp replaced by .open transition */
 
 @media (max-width: 640px) {
   .theme-picker-container {

@@ -131,22 +131,20 @@
 
 .sc-title-group {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0;
 }
 
 .sc-title-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
+  display: inline;
   border: none;
   background: transparent;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-main);
-  font-family: var(--font-title);
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, ui-serif, serif;
   cursor: pointer;
-  padding: 4px 3px;
+  padding: 2px 2px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   line-height: 1;
@@ -179,6 +177,7 @@
   height: 11px;
   color: var(--text-muted);
   margin-left: 1px;
+  vertical-align: -1px;
 }
 
 /* ---- Year / Month picker grids ---- */
