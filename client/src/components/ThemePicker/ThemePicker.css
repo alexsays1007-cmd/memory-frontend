@@ -40,16 +40,15 @@
   flex-direction: column;
   gap: 8px;
   min-width: 160px;
+  /* Mount hidden, .open triggers enter transition */
   opacity: 0;
   transform: translateY(10px) scale(0.95);
-  pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .theme-picker-panel.open {
   opacity: 1;
   transform: translateY(0) scale(1);
-  pointer-events: auto;
 }
 
 .theme-option {

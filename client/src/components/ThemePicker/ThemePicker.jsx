@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './ThemePicker.css';
 
 const themes = [
@@ -10,11 +10,13 @@ const themes = [
 ];
 
 export default function ThemePicker() {
-  const [isOpen, setIsOpen] = useState(false);
+  // visible = panel in DOM; animState = CSS class for enter/exit animation
+  const [visible, setVisible] = useState(false);
+  const [animState, setAnimState] = useState('closed'); // 'open' | 'closing' | 'closed'
   const [activeTheme, setActiveTheme] = useState('looplight-default');
+  const closeTimer = useRef(null);
 
   useEffect(() => {
-    // Load theme from localStorage if available
     const savedTheme = localStorage.getItem('memory-archive-theme');
     if (savedTheme && themes.some(t => t.id === savedTheme)) {
       setActiveTheme(savedTheme);
@@ -22,8 +24,11 @@ export default function ThemePicker() {
     }
   }, []);
 
+  // Cleanup timer on unmount
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
   const applyTheme = (themeId) => {
-    const root = document.documentElement; // <html> element
+    const root = document.documentElement;
     if (themeId === 'looplight-default') {
       root.removeAttribute('data-theme');
     } else {
@@ -31,35 +36,72 @@ export default function ThemePicker() {
     }
   };
 
+  const openPanel = useCallback(() => {
+    clearTimeout(closeTimer.current);
+    setVisible(true);
+    // rAF so the DOM mounts first, then CSS transition triggers
+    requestAnimationFrame(() => requestAnimationFrame(() => setAnimState('open')));
+  }, []);
+
+  const closePanel = useCallback(() => {
+    clearTimeout(closeTimer.current);
+    setAnimState('closing');
+  }, []);
+
+  const handleTransitionEnd = useCallback(() => {
+    if (animState === 'closing') {
+      setVisible(false);
+      setAnimState('closed');
+    }
+  }, [animState]);
+
+  const handleToggle = useCallback(() => {
+    if (visible && animState === 'open') {
+      closePanel();
+    } else if (!visible) {
+      openPanel();
+    }
+    // If animState === 'closing', clicking again re-opens
+    if (animState === 'closing') {
+      openPanel();
+    }
+  }, [visible, animState, openPanel, closePanel]);
+
   const handleThemeChange = (themeId) => {
     setActiveTheme(themeId);
     applyTheme(themeId);
     localStorage.setItem('memory-archive-theme', themeId);
-    // Auto-close after brief delay so user sees the selection feedback
-    setTimeout(() => setIsOpen(false), 350);
+    // Brief delay so user sees selection highlight, then close
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(closePanel, 350);
   };
 
   return (
     <div className="theme-picker-container">
-      <div className={`theme-picker-panel ${isOpen ? 'open' : ''}`}>
-        {themes.map(theme => (
-          <button
-            key={theme.id}
-            className={`theme-option ${activeTheme === theme.id ? 'active' : ''}`}
-            onClick={() => handleThemeChange(theme.id)}
-            title={theme.name}
-          >
-            <span
-              className="theme-color-dot"
-              style={{ backgroundColor: theme.color }}
-            />
-            <span className="theme-name">{theme.name}</span>
-          </button>
-        ))}
-      </div>
-      <button 
-        className="theme-picker-toggle" 
-        onClick={() => setIsOpen(!isOpen)}
+      {visible && (
+        <div
+          className={`theme-picker-panel ${animState === 'open' ? 'open' : ''}`}
+          onTransitionEnd={handleTransitionEnd}
+        >
+          {themes.map(theme => (
+            <button
+              key={theme.id}
+              className={`theme-option ${activeTheme === theme.id ? 'active' : ''}`}
+              onClick={() => handleThemeChange(theme.id)}
+              title={theme.name}
+            >
+              <span
+                className="theme-color-dot"
+                style={{ backgroundColor: theme.color }}
+              />
+              <span className="theme-name">{theme.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        className="theme-picker-toggle"
+        onClick={handleToggle}
         aria-label="Toggle theme picker"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
