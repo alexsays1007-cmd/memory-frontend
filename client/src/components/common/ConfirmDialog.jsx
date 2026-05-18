@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import './ConfirmDialog.css';
 
 /**
@@ -39,7 +40,7 @@ export default function ConfirmDialog({
 
   const btnClass = variant === 'danger' ? 'confirm-danger' : 'confirm-primary';
 
-  return (
+  return createPortal(
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-panel" onClick={e => e.stopPropagation()}>
         {icon === 'trash' && (
@@ -65,6 +66,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
