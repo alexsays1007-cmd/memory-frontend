@@ -128,12 +128,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  animation: memoriesFadeIn 0.3s ease-out;
+  transition: opacity 0.2s ease;
 }
 
-@keyframes memoriesFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+.memories-list.page-loading {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .memory-action-error {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatDateTime } from '../../utils/date';
 import { parseTags } from '../../utils/tags';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import './MemoryCard.css';
 
 export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTrash = false }) {
@@ -11,9 +12,9 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
   const [draftTags, setDraftTags] = useState(memory.tags || '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null); // 'hide' | 'restore' | null
   const contentRef = useRef(null);
 
-  // Check if content is actually clamped
   useEffect(() => {
     if (contentRef.current) {
       setIsClamped(contentRef.current.scrollHeight > contentRef.current.clientHeight);
@@ -45,10 +46,8 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
     }
   };
 
-  const handleHide = async () => {
-    if (!window.confirm('将此记忆移到回收站？')) {
-      return;
-    }
+  const handleHideConfirmed = async () => {
+    setConfirmAction(null);
     setIsSaving(true);
     setError('');
     try {
@@ -59,10 +58,8 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
     }
   };
 
-  const handleRestore = async () => {
-    if (!window.confirm('将此记忆恢复到档案？')) {
-      return;
-    }
+  const handleRestoreConfirmed = async () => {
+    setConfirmAction(null);
     setIsSaving(true);
     setError('');
     try {
@@ -75,7 +72,6 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
 
   let parsedTags = parseTags(memory.tags);
 
-  // Deduplicate metadata from visual tags
   if (memory.agent || memory.channel) {
     parsedTags = parsedTags.filter(t => {
       const val = t.value.toLowerCase();
@@ -103,7 +99,7 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
           </button>
           <button
             className="memory-icon-btn memory-icon-danger"
-            onClick={handleHide}
+            onClick={() => setConfirmAction('hide')}
             disabled={isSaving}
             title="删除"
           >
@@ -119,7 +115,7 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
         <div className="memory-icon-actions" style={{ opacity: 1 }}>
           <button
             className="memory-icon-btn memory-icon-restore"
-            onClick={handleRestore}
+            onClick={() => setConfirmAction('restore')}
             disabled={isSaving}
             title="恢复"
           >
@@ -228,6 +224,28 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
       {error && (
         <div className="memory-card-error">{error}</div>
       )}
+
+      {/* Confirm dialogs */}
+      <ConfirmDialog
+        open={confirmAction === 'hide'}
+        message="将此记忆移到回收站？"
+        confirmText="移到回收站"
+        cancelText="取消"
+        variant="danger"
+        icon="trash"
+        onConfirm={handleHideConfirmed}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'restore'}
+        message="将此记忆恢复到档案？"
+        confirmText="恢复"
+        cancelText="取消"
+        variant="default"
+        icon="restore"
+        onConfirm={handleRestoreConfirmed}
+        onCancel={() => setConfirmAction(null)}
+      />
     </article>
   );
 }

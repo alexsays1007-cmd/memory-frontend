@@ -30,7 +30,8 @@ export default function MemoriesPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);    // initial full load
+  const [pageLoading, setPageLoading] = useState(false); // soft load (pagination)
   const [viewMode, setViewMode] = useState('active'); // 'active' | 'trash'
   const [filters, setFilters] = useState({
     q: '',
@@ -71,7 +72,9 @@ export default function MemoriesPage() {
   }, [filters, viewMode]);
 
   const fetchMemories = useCallback(async () => {
-    setLoading(true);
+    const isInitial = memories.length === 0;
+    if (isInitial) setLoading(true);
+    else setPageLoading(true);
     try {
       const params = {
         ...filters,
@@ -99,6 +102,7 @@ export default function MemoriesPage() {
       console.error('Failed to fetch memories:', err);
     } finally {
       setLoading(false);
+      setPageLoading(false);
     }
   }, [filters, page, viewMode]);
 
@@ -174,7 +178,11 @@ export default function MemoriesPage() {
     const target = Math.max(1, Math.min(p, totalPages));
     if (target !== page) {
       setPage(target);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Gentle scroll — only scroll up if user is far down the page
+      const header = document.querySelector('.page-header');
+      if (header) {
+        header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   };
 
@@ -294,16 +302,16 @@ export default function MemoriesPage() {
         </div>
       )}
 
-      {loading ? (
+      {loading && memories.length === 0 ? (
         <LoadingSpinner />
-      ) : memories.length === 0 ? (
+      ) : memories.length === 0 && !loading ? (
         <EmptyState
           message={viewMode === 'trash' ? '回收站是空的' : '没有找到记忆'}
           icon="archive"
         />
       ) : (
         <>
-          <div className="memories-list">
+          <div className={`memories-list ${pageLoading ? 'page-loading' : ''}`}>
             {memories.map(memory => (
               <MemoryCard
                 key={memory.id}

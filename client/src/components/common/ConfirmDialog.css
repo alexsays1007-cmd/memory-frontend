@@ -1,0 +1,97 @@
+/* ================================================
+   ConfirmDialog – 自定义确认弹窗
+   替代 window.confirm，匹配整体设计风格
+   ================================================ */
+
+.confirm-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal, 1000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: confirmFadeIn 0.18s ease-out;
+}
+
+.confirm-panel {
+  background-color: var(--surface-elevated, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 320px;
+  padding: var(--space-6, 24px) var(--space-5, 20px) var(--space-5, 20px);
+  box-shadow: var(--shadow-lg);
+  animation: confirmSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+}
+
+.confirm-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto var(--space-3);
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.confirm-message {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-main);
+  margin: 0 0 var(--space-5, 20px);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.confirm-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.confirm-btn.confirm-primary {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast, #fff);
+}
+
+.confirm-btn.confirm-primary:hover {
+  opacity: 0.9;
+}
+
+.confirm-btn.confirm-danger {
+  background-color: #a6402d;
+  border-color: #a6402d;
+  color: #fff;
+}
+
+.confirm-btn.confirm-danger:hover {
+  opacity: 0.9;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirmSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
