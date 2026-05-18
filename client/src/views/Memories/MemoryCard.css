@@ -32,6 +32,7 @@
   color: var(--text-main);
   white-space: pre-wrap;
   word-break: break-word;
+  margin-top: 20px;
   margin-bottom: var(--space-4);
   position: relative;
 }
@@ -190,11 +191,62 @@
   font-size: var(--text-sm);
 }
 
-.memory-actions {
+/* ---- Icon actions (top-right corner) ---- */
+.memory-icon-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.memory-card:hover .memory-icon-actions {
+  opacity: 1;
+}
+
+.memory-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.45;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.memory-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.memory-icon-btn:hover:not(:disabled) {
+  background-color: var(--surface-soft);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.memory-icon-btn.memory-icon-danger:hover:not(:disabled) {
+  color: #a6402d;
+}
+
+.memory-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* ---- Editor actions (inside edit mode) ---- */
+.memory-editor-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-4);
 }
 
 .memory-action-btn {
@@ -220,11 +272,6 @@
   color: var(--accent-contrast, #fff);
 }
 
-.memory-action-btn.danger:hover:not(:disabled) {
-  border-color: #a6402d;
-  color: #a6402d;
-}
-
 .memory-action-btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -234,22 +281,28 @@
   .memory-card {
     padding: 14px;
   }
-  
+
   .memory-content {
     font-size: 14px;
     line-height: 1.5;
   }
-  
+
   .memory-meta {
     gap: var(--space-2);
     font-size: 10px;
   }
 
-  .memory-actions {
+  /* Always show icons on mobile (no hover) */
+  .memory-icon-actions {
+    opacity: 1;
+  }
+
+  .memory-editor-actions {
     justify-content: stretch;
   }
 
-  .memory-action-btn {
+  .memory-editor-actions .memory-action-btn {
     flex: 1;
+    text-align: center;
   }
 }
