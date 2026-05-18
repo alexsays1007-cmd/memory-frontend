@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getDiaryDates, getDiaryByDate } from '../../api/diary';
+import { useState, useEffect, useCallback } from 'react';
+import { getDiaryDates, getDiaryByDate, updateDiaryEntry, hideDiaryEntry } from '../../api/diary';
 import DateNavigator from './DateNavigator';
 import DiaryEntry from './DiaryEntry';
 import DiaryCalendar from './DiaryCalendar';
@@ -47,6 +47,20 @@ export default function DiaryPage() {
         setLoading(false);
       });
   }, [currentDate]);
+
+  const handleUpdateEntry = useCallback(async (id, payload) => {
+    const result = await updateDiaryEntry(id, payload);
+    if (result.entry) {
+      setEntries(current =>
+        current.map(e => e.id === id ? result.entry : e)
+      );
+    }
+  }, []);
+
+  const handleHideEntry = useCallback(async (id) => {
+    await hideDiaryEntry(id);
+    setEntries(current => current.filter(e => e.id !== id));
+  }, []);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -142,7 +156,12 @@ export default function DiaryPage() {
       ) : (
         <div className="diary-entries">
           {entries.map(entry => (
-            <DiaryEntry key={entry.id} entry={entry} />
+            <DiaryEntry
+              key={entry.id}
+              entry={entry}
+              onUpdate={handleUpdateEntry}
+              onHide={handleHideEntry}
+            />
           ))}
         </div>
       )}

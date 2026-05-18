@@ -57,6 +57,11 @@ function ensureMigrations(instance) {
   addColumnIfMissing(instance, 'memories', 'updated', 'TEXT');
   instance.prepare('CREATE INDEX IF NOT EXISTS idx_memories_deleted ON memories(deleted)').run();
 
+  // Diary soft-delete columns
+  addColumnIfMissing(instance, 'diary', 'deleted', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(instance, 'diary', 'deleted_at', 'TEXT');
+  instance.prepare('CREATE INDEX IF NOT EXISTS idx_diary_deleted ON diary(deleted)').run();
+
   if (tableExists(instance, 'raw_messages')) {
     addColumnIfMissing(instance, 'raw_messages', 'favorite', 'INTEGER NOT NULL DEFAULT 0');
     addColumnIfMissing(instance, 'raw_messages', 'hidden', 'INTEGER NOT NULL DEFAULT 0');

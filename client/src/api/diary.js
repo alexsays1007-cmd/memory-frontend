@@ -1,4 +1,4 @@
-import { fetchApi } from './client.js';
+import { fetchApi, requestApi } from './client.js';
 import { mockDiaryDates, mockDiaryEntries } from '../fixtures/mockDiary.js';
 
 const useMocks = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
@@ -16,4 +16,23 @@ export function getDiaryByDate(date) {
     return Promise.resolve({ data: entries });
   }
   return fetchApi('/diary', { date });
+}
+
+export function updateDiaryEntry(id, payload) {
+  return requestApi(`/diary/${id}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function hideDiaryEntry(id) {
+  return requestApi(`/diary/${id}/hide`, {
+    method: 'POST',
+  });
+}
+
+export function restoreDiaryEntry(id) {
+  return requestApi(`/diary/${id}/restore`, {
+    method: 'POST',
+  });
 }
