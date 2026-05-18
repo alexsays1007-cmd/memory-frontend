@@ -6,7 +6,6 @@ const useMocks = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true
 export function getMemories(params = {}) {
   if (useMocks) {
     let data = [...mockMemories];
-    // Basic filtering to mimic backend
     if (params.q) {
       const q = params.q.toLowerCase();
       data = data.filter(m =>
@@ -23,7 +22,11 @@ export function getMemories(params = {}) {
     if (params.channel) {
       data = data.filter(m => m.channel === params.channel);
     }
-    return Promise.resolve({ data, total: data.length });
+    const page = params.page || 1;
+    const pageSize = params.pageSize || 20;
+    const start = (page - 1) * pageSize;
+    const paged = data.slice(start, start + pageSize);
+    return Promise.resolve({ data: paged, total: data.length, page, pageSize, totalPages: Math.ceil(data.length / pageSize) });
   }
   return fetchApi('/memories', params);
 }

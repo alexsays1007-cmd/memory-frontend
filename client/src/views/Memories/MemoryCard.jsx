@@ -3,7 +3,7 @@ import { formatDateTime } from '../../utils/date';
 import { parseTags } from '../../utils/tags';
 import './MemoryCard.css';
 
-export default function MemoryCard({ memory, onUpdate, onHide }) {
+export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTrash = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +46,7 @@ export default function MemoryCard({ memory, onUpdate, onHide }) {
   };
 
   const handleHide = async () => {
-    if (!window.confirm('Hide this memory from the default view?')) {
+    if (!window.confirm('将此记忆移到回收站？')) {
       return;
     }
     setIsSaving(true);
@@ -55,6 +55,17 @@ export default function MemoryCard({ memory, onUpdate, onHide }) {
       await onHide(memory.id);
     } catch (err) {
       setError(err.message || 'Failed to hide memory');
+      setIsSaving(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsSaving(true);
+    setError('');
+    try {
+      await onRestore(memory.id);
+    } catch (err) {
+      setError(err.message || 'Failed to restore memory');
       setIsSaving(false);
     }
   };
@@ -74,7 +85,7 @@ export default function MemoryCard({ memory, onUpdate, onHide }) {
   return (
     <article className="memory-card">
       {/* Icon actions (top-right corner) */}
-      {!isEditing && (
+      {!isEditing && !isTrash && (
         <div className="memory-icon-actions">
           <button
             className="memory-icon-btn"
@@ -97,6 +108,21 @@ export default function MemoryCard({ memory, onUpdate, onHide }) {
               <path d="M3 6h18"/>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      )}
+      {isTrash && (
+        <div className="memory-icon-actions" style={{ opacity: 1 }}>
+          <button
+            className="memory-icon-btn memory-icon-restore"
+            onClick={handleRestore}
+            disabled={isSaving}
+            title="恢复"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
             </svg>
           </button>
         </div>

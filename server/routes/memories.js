@@ -68,12 +68,19 @@ function runMemoryAdmin(command, payload) {
 router.get('/', (req, res) => {
   try {
     const db = getDb();
-    const { tag, agent, channel, q, sort, includeDeleted } = req.query;
+    const { tag, agent, channel, q, sort, includeDeleted, onlyDeleted } = req.query;
+
+    // Pagination
+    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 20, 1), 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const offset = (page - 1) * pageSize;
 
     let where = [];
     let params = {};
 
-    if (includeDeleted !== '1') {
+    if (onlyDeleted === '1') {
+      where.push('COALESCE(deleted, 0) = 1');
+    } else if (includeDeleted !== '1') {
       where.push('COALESCE(deleted, 0) = 0');
     }
 
@@ -98,15 +105,20 @@ router.get('/', (req, res) => {
     }
 
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-    const orderClause = sort === 'asc' ? 'ORDER BY created ASC' : 'ORDER BY created DESC';
+    const orderClause = onlyDeleted === '1'
+      ? 'ORDER BY deleted_at DESC'
+      : sort === 'asc' ? 'ORDER BY created ASC' : 'ORDER BY created DESC';
 
     const countStmt = db.prepare(`SELECT COUNT(*) as total FROM memories ${whereClause}`);
     const { total } = countStmt.get(params);
+    const totalPages = Math.ceil(total / pageSize) || 1;
 
-    const stmt = db.prepare(`SELECT * FROM memories ${whereClause} ${orderClause}`);
-    const data = stmt.all(params);
+    const stmt = db.prepare(
+      `SELECT * FROM memories ${whereClause} ${orderClause} LIMIT @limit OFFSET @offset`
+    );
+    const data = stmt.all({ ...params, limit: pageSize, offset });
 
-    res.json({ data, total });
+    res.json({ data, total, page, pageSize, totalPages });
   } catch (err) {
     console.error('Error fetching memories:', err);
     res.status(500).json({ error: 'Failed to fetch memories' });

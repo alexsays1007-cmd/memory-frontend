@@ -237,6 +237,15 @@
   color: #a6402d;
 }
 
+.memory-icon-btn.memory-icon-restore {
+  opacity: 0.7;
+}
+
+.memory-icon-btn.memory-icon-restore:hover:not(:disabled) {
+  color: var(--accent);
+  opacity: 1;
+}
+
 .memory-icon-btn:disabled {
   cursor: not-allowed;
   opacity: 0.4;
