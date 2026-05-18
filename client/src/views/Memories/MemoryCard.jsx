@@ -60,6 +60,9 @@ export default function MemoryCard({ memory, onUpdate, onHide, onRestore, isTras
   };
 
   const handleRestore = async () => {
+    if (!window.confirm('将此记忆恢复到档案？')) {
+      return;
+    }
     setIsSaving(true);
     setError('');
     try {
