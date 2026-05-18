@@ -49,12 +49,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-2);
-}
-
-.cal-month {
-  font-family: var(--font-title);
-  font-size: var(--text-base);
-  color: var(--text-main);
+  min-height: 32px;
 }
 
 .cal-nav {
@@ -68,6 +63,7 @@
   justify-content: center;
   color: var(--text-muted);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .cal-nav:hover {
@@ -75,13 +71,108 @@
   color: var(--text-main);
 }
 
+.cal-nav svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---- Title group (year + month drill-down) ---- */
+.drp-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+.drp-title-btn {
+  display: inline;
+  border: none;
+  background: transparent;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  font-family: var(--font-title);
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.drp-title-btn:hover {
+  background-color: var(--surface-soft);
+}
+
+.drp-title-year {
+  color: var(--text-muted);
+}
+
+.drp-title-chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+  margin-left: 1px;
+  vertical-align: -1px;
+}
+
+.drp-title-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-family: var(--font-title);
+  line-height: 1;
+}
+
+.drp-title-sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+  margin: 0 3px;
+  line-height: 1;
+}
+
+/* ---- Year / Month picker grids ---- */
+.drp-picker-grid {
+  display: grid;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.drp-year-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.drp-month-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.drp-picker-cell {
+  padding: 8px 0;
+  border: none;
+  background: var(--surface-soft);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-weight: normal;
+}
+
+.drp-picker-cell:hover {
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.drp-picker-cell.active {
+  background-color: var(--accent);
+  color: var(--bg);
+  font-weight: var(--font-medium);
+}
+
+/* ---- Calendar grid ---- */
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
   font-size: 10px;
   color: var(--text-muted);
-  text-transform: uppercase;
   margin-bottom: 4px;
 }
 

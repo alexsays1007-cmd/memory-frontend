@@ -2,12 +2,12 @@ import { formatTime } from '../../utils/date';
 import './TimelineItem.css';
 
 const actionColors = {
-  '叫醒': '#A296AC', // soft purple
-  '巡逻': '#9CBF9D', // soft green
-  '写入': '#8F9CA8', // blue-gray
-  '记录': '#8F9CA8', // blue-gray
-  '系统': '#B09E8C', // taupe-gold
-  '对话': '#C0A0A7', // dusty pink
+  '巡逻': '#A8BFA0', // morandi green
+  '叫醒': '#C4A4A0', // morandi red/blush
+  '写作': '#A0A8B8', // morandi blue-gray
+  '探索': '#9AB0B8', // morandi dusty blue
+  '整理': '#C8BFA0', // morandi sand/yellow
+  '日记': '#B8A0B0', // morandi mauve
   'default': '#B8B0B8',
 };
 
@@ -27,11 +27,11 @@ function getPulseIcon(item) {
   // Action type mapping
   const iconMap = {
     '巡逻': '🐾',
-    '叫醒': '🐾',
-    '写入': '✎',
-    '记录': '📋',
-    '系统': '✺',
-    '对话': '💬',
+    '叫醒': '⏰',
+    '写作': '📝',
+    '探索': '🔍',
+    '整理': '📂',
+    '日记': '📖',
   };
 
   return { icon: iconMap[type] || null, isBuddy: false };

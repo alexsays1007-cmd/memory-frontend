@@ -9,11 +9,11 @@ import './ConsciousnessPage.css';
 
 const ACTION_TYPE_ICONS = {
   '巡逻': '🐾',
-  '叫醒': '🐾',
-  '写入': '✎',
-  '记录': '📋',
-  '系统': '✺',
-  '对话': '💬',
+  '叫醒': '⏰',
+  '写作': '📝',
+  '探索': '🔍',
+  '整理': '📂',
+  '日记': '📖',
 };
 
 export default function ConsciousnessPage() {
@@ -166,12 +166,12 @@ export default function ConsciousnessPage() {
         <div className="filter-popover-overlay" onClick={() => setShowFilters(false)}>
           <div className="filter-popover" onClick={(e) => e.stopPropagation()}>
             <div className="filter-popover-header">
-              <h3>Filter Logs</h3>
+              <h3>筛选日志</h3>
             </div>
             
             <div className="filter-popover-body">
               <div className="filter-item">
-                <label className="filter-label">Action Type</label>
+                <label className="filter-label">动作类型</label>
                 <SoftSelect
                   value={tempFilters.action_type}
                   onChange={(val) => setTempFilters(p => ({...p, action_type: val}))}
@@ -181,7 +181,7 @@ export default function ConsciousnessPage() {
               </div>
 
               <div className="filter-item">
-                <label className="filter-label">Date Range</label>
+                <label className="filter-label">日期范围</label>
                 <DateRangePicker 
                   startDate={tempFilters.date_from}
                   endDate={tempFilters.date_to}
@@ -197,8 +197,8 @@ export default function ConsciousnessPage() {
             </div>
 
             <div className="filter-popover-footer">
-              <button className="filter-reset-btn" onClick={handleReset}>Reset</button>
-              <button className="filter-apply-btn" onClick={handleApply}>Apply</button>
+              <button className="filter-reset-btn" onClick={handleReset}>重置</button>
+              <button className="filter-apply-btn" onClick={handleApply}>应用</button>
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function ConsciousnessPage() {
                 disabled={page <= 1} 
                 onClick={() => setPage(p => p - 1)}
               >
-                Previous
+                上一页
               </button>
               <span className="page-info">
                 第 {page} / {totalPages} 页
@@ -235,7 +235,7 @@ export default function ConsciousnessPage() {
                 disabled={page >= totalPages} 
                 onClick={() => setPage(p => p + 1)}
               >
-                Next
+                下一页
               </button>
             </div>
           )}
