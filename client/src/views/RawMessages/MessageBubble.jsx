@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { formatTime } from '../../utils/date';
 import { getMessageText, getMessageRole, getMessageSource, getMessageCreated, isFavorited, isLongMessage, formatSource } from '../../utils/message';
 import { toggleFavorite } from '../../api/rawMessages';
 import './MessageBubble.css';
 
-export default function MessageBubble({ message, onUpdate }) {
+function highlightText(text, query) {
+  if (!query || !text) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="msg-highlight">{part}</mark>
+      : part
+  );
+}
+
+export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMatch, bubbleRef }) {
   const [expanded, setExpanded] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
 
@@ -49,12 +61,19 @@ export default function MessageBubble({ message, onUpdate }) {
   };
 
   const timeStr = formatTime(created);
+  const renderedContent = useMemo(
+    () => searchQ ? highlightText(content, searchQ) : content,
+    [content, searchQ]
+  );
 
   return (
-    <div className={`msg-row ${isUser ? 'msg-user' : 'msg-assistant'}`}>
+    <div
+      className={`msg-row ${isUser ? 'msg-user' : 'msg-assistant'} ${isFocusedMatch ? 'msg-focused-match' : ''}`}
+      ref={bubbleRef}
+    >
       <div className="msg-bubble">
         <div className={`msg-text ${isLong && !expanded ? 'msg-clamped' : ''}`}>
-          {content}
+          {renderedContent}
         </div>
         {isLong && !expanded && (
           <button className="msg-expand" onClick={() => setExpanded(true)}>

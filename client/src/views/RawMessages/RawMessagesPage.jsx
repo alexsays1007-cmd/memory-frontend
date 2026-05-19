@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, createRef } from 'react';
 import { getRawMessages, getRawMessageChannels, getRawMessageDates } from '../../api/rawMessages';
-import { getMessageCreated, isSystemOrHidden } from '../../utils/message';
+import { getMessageCreated, getMessageText, isSystemOrHidden } from '../../utils/message';
 import { parseToLocalDate } from '../../utils/date';
 import MessageBubble from './MessageBubble';
 import StreamCalendar from './StreamCalendar';
@@ -72,8 +72,10 @@ export default function RawMessagesPage() {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [showDateChips, setShowDateChips] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [focusedMatchIdx, setFocusedMatchIdx] = useState(-1);
 
   const searchTimer = useRef(null);
+  const matchRefs = useRef([]);
 
   useEffect(() => {
     return () => clearTimeout(searchTimer.current);
@@ -231,6 +233,73 @@ export default function RawMessagesPage() {
 
   const visibleMessages = messages.filter(m => !isSystemOrHidden(m));
 
+  // Find indices of messages that match the search query (client-side)
+  const matchIndices = useMemo(() => {
+    if (!searchQ) return [];
+    const q = searchQ.toLowerCase();
+    return visibleMessages.reduce((acc, msg, idx) => {
+      const text = getMessageText(msg) || '';
+      if (text.toLowerCase().includes(q)) acc.push(idx);
+      return acc;
+    }, []);
+  }, [visibleMessages, searchQ]);
+
+  // Sync refs array length with match count
+  useEffect(() => {
+    matchRefs.current = matchIndices.map(() => createRef());
+  }, [matchIndices.length]);
+
+  // Reset focused match when search or matches change
+  const prevSearchQ = useRef(searchQ);
+  useEffect(() => {
+    if (prevSearchQ.current !== searchQ) {
+      // Search term changed → reset to first match
+      setFocusedMatchIdx(matchIndices.length > 0 ? 0 : -1);
+      prevSearchQ.current = searchQ;
+    } else if (focusedMatchIdx === -1 && matchIndices.length > 0) {
+      // Matches appeared (e.g. after fetch) → select first
+      setFocusedMatchIdx(0);
+    }
+  }, [searchQ, matchIndices.length]);
+
+  // Scroll focused match into view
+  useEffect(() => {
+    if (focusedMatchIdx < 0 || focusedMatchIdx >= matchRefs.current.length) return;
+    const ref = matchRefs.current[focusedMatchIdx];
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [focusedMatchIdx]);
+
+  const goNextMatch = useCallback(() => {
+    if (matchIndices.length === 0) return;
+    setFocusedMatchIdx(prev => {
+      const next = prev + 1;
+      // If we've gone past all loaded matches and there are more on server
+      if (next >= matchIndices.length && hasMore) {
+        handleLoadEarlier();
+        return prev; // stay until new data loads
+      }
+      return next >= matchIndices.length ? 0 : next;
+    });
+  }, [matchIndices.length, hasMore]);
+
+  const goPrevMatch = useCallback(() => {
+    if (matchIndices.length === 0) return;
+    setFocusedMatchIdx(prev =>
+      prev <= 0 ? matchIndices.length - 1 : prev - 1
+    );
+  }, [matchIndices.length]);
+
+  // Keyboard: Enter = next, Shift+Enter = prev (when search input focused)
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && matchIndices.length > 0) {
+      e.preventDefault();
+      if (e.shiftKey) goPrevMatch();
+      else goNextMatch();
+    }
+  };
+
   const renderMessages = () => {
     let lastDateLabel = null;
     const items = [];
@@ -251,11 +320,15 @@ export default function RawMessagesPage() {
         lastDateLabel = dateLabel;
       }
 
+      const matchPos = matchIndices.indexOf(idx);
       items.push(
         <MessageBubble
           key={msg.id || idx}
           message={msg}
           onUpdate={handleMessageUpdate}
+          searchQ={searchQ}
+          isFocusedMatch={matchPos >= 0 && matchPos === focusedMatchIdx}
+          bubbleRef={matchPos >= 0 ? matchRefs.current[matchPos] : undefined}
         />
       );
     });
@@ -307,6 +380,7 @@ export default function RawMessagesPage() {
             placeholder="搜索对话内容..."
             value={searchInput}
             onChange={handleSearchInput}
+            onKeyDown={handleSearchKeyDown}
           />
           {searchInput && (
             <button className="search-clear" onClick={clearSearch}>
@@ -375,6 +449,42 @@ export default function RawMessagesPage() {
             </button>
           </div>
         </div>
+
+        {searchQ && !loading && (
+          <div className="stream-search-nav">
+            <span className="search-nav-label">
+              &quot;{searchQ}&quot; &middot; {total} 条结果
+            </span>
+            {matchIndices.length > 0 && (
+              <div className="search-nav-controls">
+                <button
+                  className="search-nav-btn"
+                  onClick={goPrevMatch}
+                  disabled={matchIndices.length <= 1}
+                  aria-label="上一个匹配"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="18 15 12 9 6 15"/>
+                  </svg>
+                </button>
+                <span className="search-nav-count">
+                  {focusedMatchIdx + 1} / {matchIndices.length}
+                  {hasMore && '+'}
+                </span>
+                <button
+                  className="search-nav-btn"
+                  onClick={goNextMatch}
+                  disabled={matchIndices.length <= 1 && !hasMore}
+                  aria-label="下一个匹配"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showDateChips && !showDatePicker && (() => {
@@ -413,12 +523,6 @@ export default function RawMessagesPage() {
           onClear={clearAllDates}
           onClose={() => setShowDatePicker(false)}
         />
-      )}
-
-      {searchQ && !loading && (
-        <div className="stream-search-hint">
-          搜索 &quot;{searchQ}&quot; &middot; {total} 条结果
-        </div>
       )}
 
       <div className="stream-messages">

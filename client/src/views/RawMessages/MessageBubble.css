@@ -172,6 +172,25 @@
 }
 
 /* ================================================
+   Search Highlight
+   ================================================ */
+.msg-highlight {
+  background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.msg-focused-match .msg-highlight {
+  background-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.msg-focused-match .msg-bubble {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ================================================
    Date Separator
    ================================================ */
 .date-separator {
