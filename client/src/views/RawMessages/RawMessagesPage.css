@@ -165,6 +165,22 @@
   white-space: nowrap;
 }
 
+/* Mobile: stretch channel chips to fill width */
+@media (max-width: 640px) {
+  .channel-chips {
+    width: 100%;
+  }
+
+  .channel-chips .stream-chip {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .channel-chips .stream-chip:first-child {
+    flex: 0.5;
+  }
+}
+
 /* ================================================
    Row 3: Session Selector (full width)
    ================================================ */

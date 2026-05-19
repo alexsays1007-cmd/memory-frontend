@@ -277,7 +277,9 @@ export default function RawMessagesPage() {
     });
   };
 
-  const visibleMessages = messages.filter(m => !isSystemOrHidden(m));
+  const visibleMessages = showHidden
+    ? messages.filter(m => m.hidden === 1 || m.hidden === true)
+    : messages.filter(m => !isSystemOrHidden(m));
 
   // Find indices of messages that match the search query (client-side)
   const matchIndices = useMemo(() => {
