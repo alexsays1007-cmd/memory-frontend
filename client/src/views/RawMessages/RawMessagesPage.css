@@ -11,7 +11,7 @@
 /* Page Header */
 .raw-messages-page .page-header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
   margin-bottom: var(--space-2);
 }

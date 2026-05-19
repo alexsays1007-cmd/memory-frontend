@@ -364,7 +364,7 @@ export default function RawMessagesPage() {
           </svg>
           <div>
             <h1 className="page-title">对话流</h1>
-            <span className="page-subtitle">RAW MESSAGE STREAM</span>
+            <span className="page-subtitle">RAW MESSAGE</span>
           </div>
         </div>
       </div>

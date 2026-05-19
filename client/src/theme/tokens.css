@@ -22,6 +22,8 @@
   --riven-dark: #4A474C;
   --riven-muted: #7A6B63;
 
+  --brand-mark: #8B6A55;
+
   /* === Old aliases (for any components still using them) === */
   --color-bg-primary: var(--bg);
   --color-bg-secondary: var(--surface-soft);
@@ -134,6 +136,8 @@
   --riven-dark: #A68B75;
   --riven-muted: #C4B5A9;
 
+  --brand-mark: #9B7895;
+
   /* aliases */
   --color-bg-primary: var(--bg);
   --color-bg-secondary: var(--surface-soft);
@@ -179,6 +183,8 @@
   --riven-dark: #2F2E34;
   --riven-muted: #575459;
 
+  --brand-mark: #8B6A55;
+
   /* aliases */
   --color-bg-primary: var(--bg);
   --color-bg-secondary: var(--surface-soft);
@@ -223,6 +229,8 @@
   --riven-light: #E8DED6;
   --riven-dark: #8F7F72;
   --riven-muted: #B3A59A;
+
+  --brand-mark: #A88F7A;
 
   /* aliases */
   --color-bg-primary: var(--bg);
@@ -270,6 +278,8 @@
   --riven-light: #D2B48C;
   --riven-dark: #0E0C0F;
   --riven-muted: #8D7A68;
+
+  --brand-mark: #D2B48C;
 
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.28);
