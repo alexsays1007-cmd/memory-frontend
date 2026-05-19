@@ -191,6 +191,62 @@
 }
 
 /* ================================================
+   Manage Mode Checkbox
+   ================================================ */
+.msg-row.msg-manage {
+  cursor: pointer;
+}
+
+.msg-row.msg-manage {
+  align-items: center;
+}
+
+.msg-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0 6px;
+  z-index: 1;
+}
+
+.msg-checkbox input {
+  display: none;
+}
+
+.msg-checkbox-mark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.msg-checkbox input:checked + .msg-checkbox-mark {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.msg-checkbox input:checked + .msg-checkbox-mark::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border: solid var(--bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.msg-row.msg-manage .msg-bubble {
+  max-width: calc(72% - 28px);
+}
+
+/* ================================================
    Date Separator
    ================================================ */
 .date-separator {
@@ -243,5 +299,14 @@
   .msg-action-btn svg {
     width: 12px;
     height: 12px;
+  }
+
+  .msg-row.msg-manage .msg-bubble {
+    max-width: calc(82% - 28px);
+  }
+
+  .msg-checkbox-mark {
+    width: 22px;
+    height: 22px;
   }
 }

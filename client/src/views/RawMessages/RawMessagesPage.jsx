@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo, createRef } from 'react';
-import { getRawMessages, getRawMessageChannels, getRawMessageDates } from '../../api/rawMessages';
+import { getRawMessages, getRawMessageChannels, getRawMessageDates, hideMessage } from '../../api/rawMessages';
 import { getMessageCreated, getMessageText, isSystemOrHidden } from '../../utils/message';
 import { parseToLocalDate } from '../../utils/date';
 import MessageBubble from './MessageBubble';
 import StreamCalendar from './StreamCalendar';
+import SessionPanel from './SessionPanel';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './RawMessagesPage.css';
@@ -13,6 +14,7 @@ const SOURCE_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'wechat', label: 'WeChat' },
   { value: 'telegram', label: 'Telegram' },
+  { value: 'chatgpt', label: 'ChatGPT' },
 ];
 
 function getBrowserTimezone() {
@@ -73,6 +75,13 @@ export default function RawMessagesPage() {
   const [showDateChips, setShowDateChips] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [focusedMatchIdx, setFocusedMatchIdx] = useState(-1);
+  const [selectedSession, setSelectedSession] = useState('');
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [showSessionPanel, setShowSessionPanel] = useState(false);
+  const [manageMode, setManageMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [hiding, setHiding] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const searchTimer = useRef(null);
   const matchRefs = useRef([]);
@@ -115,6 +124,7 @@ export default function RawMessagesPage() {
       sort: 'desc',
     };
     if (channel) params.channel = channel;
+    if (selectedSession) params.session = selectedSession;
     if (searchQ) params.q = searchQ;
     if (dateMode === 'single' && selectedDate) {
       const { startUtc, endUtc } = getLocalDayUtcRange(selectedDate);
@@ -126,8 +136,9 @@ export default function RawMessagesPage() {
       params.endUtc = endUtc;
     }
     if (favOnly) params.favorite = 1;
+    if (showHidden) params.includeHidden = '1';
     return params;
-  }, [channel, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly]);
+  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden]);
 
   const fetchMessages = useCallback(async (pageNum = 1, loadEarlier = false) => {
     if (loadEarlier) setLoadingMore(true);
@@ -220,6 +231,41 @@ export default function RawMessagesPage() {
     if (!loadingMore && hasMore) {
       fetchMessages(page + 1, true);
     }
+  };
+
+  const handleSessionSelect = (sessionId) => {
+    setSelectedSession(sessionId || '');
+    setSessionTitle(sessionId ? '' : '');
+  };
+
+  const toggleSelectId = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBatchHide = async () => {
+    if (selectedIds.size === 0 || hiding) return;
+    setHiding(true);
+    try {
+      await Promise.all([...selectedIds].map(id => hideMessage(id)));
+      setMessages(prev => prev.filter(m => !selectedIds.has(m.id)));
+      setTotal(prev => prev - selectedIds.size);
+      setSelectedIds(new Set());
+      setManageMode(false);
+    } catch (err) {
+      console.error('Failed to hide messages:', err);
+    } finally {
+      setHiding(false);
+    }
+  };
+
+  const exitManageMode = () => {
+    setManageMode(false);
+    setSelectedIds(new Set());
   };
 
   const handleMessageUpdate = (updated) => {
@@ -329,6 +375,9 @@ export default function RawMessagesPage() {
           searchQ={searchQ}
           isFocusedMatch={matchPos >= 0 && matchPos === focusedMatchIdx}
           bubbleRef={matchPos >= 0 ? matchRefs.current[matchPos] : undefined}
+          manageMode={manageMode}
+          selected={selectedIds.has(msg.id)}
+          onToggleSelect={() => toggleSelectId(msg.id)}
         />
       );
     });
@@ -370,28 +419,90 @@ export default function RawMessagesPage() {
       </div>
 
       <div className="stream-toolbar">
-        <div className="stream-search-container">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            className="stream-search-input"
-            type="text"
-            placeholder="搜索对话内容..."
-            value={searchInput}
-            onChange={handleSearchInput}
-            onKeyDown={handleSearchKeyDown}
-          />
-          {searchInput && (
-            <button className="search-clear" onClick={clearSearch}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        {/* Row 1: search + action icons */}
+        <div className="stream-row-search">
+          <div className="stream-search-container">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              className="stream-search-input"
+              type="text"
+              placeholder="搜索对话内容..."
+              value={searchInput}
+              onChange={handleSearchInput}
+              onKeyDown={handleSearchKeyDown}
+            />
+            {searchInput && (
+              <button className="search-clear" onClick={clearSearch}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <div className="stream-controls">
+            <div className="stream-date-wrapper">
+              <button
+                className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
+                onClick={handleDateBtnClick}
+                title="日期"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {hasDateFilter && formatDateLabel()}
+              </button>
+              {hasDateFilter && (
+                <button className="stream-date-clear" onClick={clearAllDates}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <button
+              className={`stream-chip icon-chip fav-chip ${favOnly ? 'active' : ''}`}
+              onClick={() => setFavOnly(!favOnly)}
+              title="收藏"
+            >
+              <svg viewBox="0 0 24 24" fill={favOnly ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
               </svg>
             </button>
-          )}
+
+            <button
+              className={`stream-chip icon-chip hidden-chip ${showHidden ? 'active' : ''}`}
+              onClick={() => setShowHidden(!showHidden)}
+              title="已隐藏"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+
+            <button
+              className={`stream-chip icon-chip manage-chip ${manageMode ? 'active' : ''}`}
+              onClick={manageMode ? exitManageMode : () => setManageMode(true)}
+              title={manageMode ? '退出管理' : '管理'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+                {manageMode
+                  ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+                  : <><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>
+                }
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="stream-chips-row">
+        {/* Row 2: channel chips */}
+        <div className="stream-row-channels">
           <div className="channel-chips">
             {SOURCE_OPTIONS.map(option => (
               <button
@@ -414,39 +525,45 @@ export default function RawMessagesPage() {
                 </button>
               ))}
           </div>
+        </div>
 
-          <div className="stream-controls">
-            <div className="stream-date-wrapper">
-              <button
-                className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
-                onClick={handleDateBtnClick}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {formatDateLabel()}
-              </button>
-              {hasDateFilter && (
-                <button className="stream-date-clear" onClick={clearAllDates}>
+        {/* Row 3: session selector (full width) */}
+        <div className="stream-row-session">
+          <div className="session-btn-wrapper">
+            <button
+              className={`session-selector ${selectedSession ? 'has-session' : ''}`}
+              onMouseDown={e => e.stopPropagation()}
+              onClick={() => setShowSessionPanel(!showSessionPanel)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="session-selector-icon">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              <span className="session-selector-text">
+                {selectedSession ? (sessionTitle || '已选会话') : '全部会话'}
+              </span>
+              <span className="session-selector-count">{total} 条</span>
+              {selectedSession ? (
+                <button className="session-clear" onClick={(e) => { e.stopPropagation(); handleSessionSelect(null); }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="session-selector-caret">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               )}
-            </div>
-
-            <button
-              className={`stream-chip fav-chip ${favOnly ? 'active' : ''}`}
-              onClick={() => setFavOnly(!favOnly)}
-            >
-              <svg viewBox="0 0 24 24" fill={favOnly ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-              收藏
             </button>
+            <SessionPanel
+              open={showSessionPanel}
+              onClose={() => setShowSessionPanel(false)}
+              onSelect={(sid, title) => {
+                setSelectedSession(sid || '');
+                setSessionTitle(title || '');
+              }}
+              currentSession={selectedSession}
+              currentChannel={channel}
+            />
           </div>
         </div>
 
@@ -549,13 +666,33 @@ export default function RawMessagesPage() {
         )}
       </div>
 
-      {showScrollBottom && (
+      {showScrollBottom && !manageMode && (
         <button className="scroll-bottom-btn" onClick={scrollToBottom} aria-label="回到底部">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14"/>
             <path d="M19 12l-7 7-7-7"/>
           </svg>
         </button>
+      )}
+
+      {manageMode && (
+        <div className="manage-bar">
+          <span className="manage-bar-count">
+            已选 {selectedIds.size} 条
+          </span>
+          <div className="manage-bar-actions">
+            <button className="manage-bar-cancel" onClick={exitManageMode}>
+              取消
+            </button>
+            <button
+              className="manage-bar-hide"
+              disabled={selectedIds.size === 0 || hiding}
+              onClick={handleBatchHide}
+            >
+              {hiding ? '隐藏中...' : '隐藏'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

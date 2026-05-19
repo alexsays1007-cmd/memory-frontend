@@ -126,31 +126,138 @@
   color: var(--text-main);
 }
 
-/* Chips Row */
-.stream-chips-row {
+/* ================================================
+   Row 1: Search + Action Icons
+   ================================================ */
+.stream-row-search {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  overflow-x: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
-.stream-chips-row::-webkit-scrollbar {
-  display: none;
-}
-
-.channel-chips {
-  display: flex;
-  gap: var(--space-2);
-  flex-shrink: 0;
+.stream-row-search .stream-search-container {
+  flex: 1;
+  min-width: 0;
 }
 
 .stream-controls {
   display: flex;
   gap: var(--space-2);
   flex-shrink: 0;
+}
+
+/* ================================================
+   Row 2: Channel Chips (scrollable)
+   ================================================ */
+.stream-row-channels {
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.stream-row-channels::-webkit-scrollbar {
+  display: none;
+}
+
+.channel-chips {
+  display: flex;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+/* ================================================
+   Row 3: Session Selector (full width)
+   ================================================ */
+.stream-row-session {
+  position: relative;
+}
+
+.session-selector {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.session-selector:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.session-selector.has-session {
+  background-color: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: transparent;
+  font-weight: var(--font-medium);
+}
+
+.session-selector-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.session-selector-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.session-selector-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-selector.has-session .session-selector-count {
+  color: var(--accent-text);
+  opacity: 0.6;
+}
+
+.session-selector-caret {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.session-selector .session-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.session-selector .session-clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+.session-selector .session-clear:hover {
+  background-color: color-mix(in srgb, var(--accent-text) 15%, transparent);
 }
 
 .stream-chip {
@@ -181,6 +288,15 @@
 }
 
 .fav-chip svg {
+  flex-shrink: 0;
+}
+
+/* Icon-only chips (no text label) */
+.stream-chip.icon-chip {
+  padding: 5px 8px;
+}
+
+.stream-chip.icon-chip svg {
   flex-shrink: 0;
 }
 
@@ -384,6 +500,84 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Session btn wrapper (for positioning the panel) */
+.session-btn-wrapper {
+  position: relative;
+}
+
+/* ================================================
+   Manage Bar (bottom fixed)
+   ================================================ */
+.manage-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: calc(var(--z-sticky) + 5);
+  animation: manageBarSlideUp 0.2s ease-out;
+}
+
+@keyframes manageBarSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.manage-bar-count {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: var(--font-medium);
+}
+
+.manage-bar-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.manage-bar-cancel {
+  padding: 7px 16px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.manage-bar-cancel:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.manage-bar-hide {
+  padding: 7px 16px;
+  font-size: 13px;
+  border: none;
+  border-radius: var(--radius-full);
+  background-color: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  font-weight: var(--font-medium);
+  transition: all var(--transition-fast);
+}
+
+.manage-bar-hide:hover:not(:disabled) {
+  opacity: 0.9;
+  box-shadow: var(--shadow-sm);
+}
+
+.manage-bar-hide:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ================================================
    Message List Area
    ================================================ */
@@ -507,5 +701,28 @@
   .search-nav-btn svg {
     width: 16px;
     height: 16px;
+  }
+
+  .stream-chip.icon-chip {
+    padding: 4px 7px;
+  }
+
+  .session-selector {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .manage-bar {
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .manage-bar-count {
+    font-size: 13px;
+  }
+
+  .manage-bar-cancel,
+  .manage-bar-hide {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 }

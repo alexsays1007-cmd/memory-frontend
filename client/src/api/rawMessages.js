@@ -36,6 +36,11 @@ export function toggleFavorite(id, favorite) {
   });
 }
 
+/** Fetch sessions list, optionally filtered by channel */
+export function getSessions(params = {}) {
+  return fetchApi('/raw-messages/sessions', params);
+}
+
 /** Soft-hide a message */
 export function hideMessage(id) {
   return requestApi(`/raw-messages/${id}/hide`, { method: 'POST' });

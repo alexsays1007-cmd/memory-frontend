@@ -16,7 +16,7 @@ function highlightText(text, query) {
   );
 }
 
-export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMatch, bubbleRef }) {
+export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMatch, bubbleRef, manageMode, selected, onToggleSelect }) {
   const [expanded, setExpanded] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
 
@@ -68,9 +68,16 @@ export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMat
 
   return (
     <div
-      className={`msg-row ${isUser ? 'msg-user' : 'msg-assistant'} ${isFocusedMatch ? 'msg-focused-match' : ''}`}
+      className={`msg-row ${isUser ? 'msg-user' : 'msg-assistant'} ${isFocusedMatch ? 'msg-focused-match' : ''} ${manageMode ? 'msg-manage' : ''}`}
       ref={bubbleRef}
+      onClick={manageMode ? onToggleSelect : undefined}
     >
+      {manageMode && (
+        <label className="msg-checkbox" onClick={e => e.stopPropagation()}>
+          <input type="checkbox" checked={selected} onChange={onToggleSelect} />
+          <span className="msg-checkbox-mark" />
+        </label>
+      )}
       <div className="msg-bubble">
         <div className={`msg-text ${isLong && !expanded ? 'msg-clamped' : ''}`}>
           {renderedContent}
