@@ -163,6 +163,121 @@ router.get('/', (req, res) => {
   }
 });
 
+function sessionsTableExists(db) {
+  return Boolean(
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'raw_message_sessions'").get()
+  );
+}
+
+router.get('/sessions', (req, res) => {
+  try {
+    const db = getDb();
+    if (!rawMessagesTableExists(db)) {
+      return res.json({ sessions: [] });
+    }
+
+    const hasMeta = sessionsTableExists(db);
+    const channelFilter = req.query.channel;
+
+    let whereParts = [];
+    let params = {};
+    if (channelFilter) {
+      whereParts.push('channel = @channel');
+      params.channel = String(channelFilter);
+    }
+    const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    const liveStats = db.prepare(`
+      SELECT
+        session,
+        COUNT(*) AS message_count,
+        SUM(CASE WHEN COALESCE(hidden, 0) = 0 THEN 1 ELSE 0 END) AS visible_count,
+        MIN(created) AS first_created,
+        MAX(created) AS last_created,
+        MAX(channel) AS channel,
+        MAX(agent) AS agent,
+        MAX(source) AS source
+      FROM raw_messages
+      ${whereClause}
+      GROUP BY session
+      ORDER BY MIN(created) DESC
+    `).all(params);
+
+    let metaMap = {};
+    if (hasMeta) {
+      const metaRows = db.prepare('SELECT * FROM raw_message_sessions').all();
+      for (const row of metaRows) {
+        metaMap[row.session] = row;
+      }
+    }
+
+    const sessions = liveStats.map(s => ({
+      session: s.session,
+      title: metaMap[s.session]?.title || s.session,
+      channel: s.channel,
+      agent: s.agent,
+      source: s.source,
+      message_count: s.message_count,
+      visible_count: s.visible_count,
+      first_created: s.first_created,
+      last_created: s.last_created,
+      imported_at: metaMap[s.session]?.imported_at || null,
+      note: metaMap[s.session]?.note || null,
+    }));
+
+    res.json({ sessions });
+  } catch (err) {
+    console.error('Error fetching sessions:', err);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+router.get('/sessions/:session', (req, res) => {
+  try {
+    const db = getDb();
+    if (!rawMessagesTableExists(db)) {
+      return res.status(404).json({ error: 'raw_messages table does not exist' });
+    }
+
+    const session = req.params.session;
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) AS message_count,
+        SUM(CASE WHEN COALESCE(hidden, 0) = 0 THEN 1 ELSE 0 END) AS visible_count,
+        SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) AS user_count,
+        SUM(CASE WHEN role = 'assistant' THEN 1 ELSE 0 END) AS assistant_count,
+        SUM(CASE WHEN COALESCE(hidden, 0) = 1 THEN 1 ELSE 0 END) AS hidden_count,
+        MIN(created) AS first_created,
+        MAX(created) AS last_created,
+        MAX(channel) AS channel,
+        MAX(agent) AS agent,
+        MAX(source) AS source
+      FROM raw_messages
+      WHERE session = ?
+    `).get(session);
+
+    if (!stats || stats.message_count === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    let meta = null;
+    if (sessionsTableExists(db)) {
+      meta = db.prepare('SELECT * FROM raw_message_sessions WHERE session = ?').get(session);
+    }
+
+    res.json({
+      session,
+      title: meta?.title || session,
+      ...stats,
+      imported_at: meta?.imported_at || null,
+      note: meta?.note || null,
+    });
+  } catch (err) {
+    console.error('Error fetching session detail:', err);
+    res.status(500).json({ error: 'Failed to fetch session detail' });
+  }
+});
+
 router.get('/channels', (req, res) => {
   try {
     const db = getDb();
