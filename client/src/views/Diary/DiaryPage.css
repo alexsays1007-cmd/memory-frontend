@@ -38,28 +38,47 @@
   letter-spacing: 0.1em;
 }
 
-.calendar-btn {
+/* Handoff button */
+.handoff-btn {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
   color: var(--text-muted);
+  cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
-.calendar-btn svg {
-  width: 20px;
-  height: 20px;
+.handoff-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
-.calendar-btn:hover {
+.handoff-btn-label {
+  font-family: var(--font-title);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.handoff-btn:hover {
   background-color: var(--surface-soft);
   color: var(--text-main);
-  border-color: var(--riven-muted);
+  border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .handoff-btn {
+    padding: 7px 10px;
+  }
+
+  .handoff-btn-label {
+    font-size: 11px;
+  }
 }
 
 .diary-paper-decoration {

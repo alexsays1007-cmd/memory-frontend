@@ -57,6 +57,26 @@ app.get('/api/health', (req, res) => {
   }
 });
 
+// Handoff file (read-only)
+app.get('/api/handoff', (req, res) => {
+  const handoffPath = process.env.HANDOFF_PATH || path.join(process.env.HOME || '/home/claude', 'handoff.md');
+  try {
+    if (!fs.existsSync(handoffPath)) {
+      return res.status(404).json({ error: 'Handoff file not found' });
+    }
+    const stat = fs.statSync(handoffPath);
+    const content = fs.readFileSync(handoffPath, 'utf-8');
+    res.json({
+      content,
+      updatedAt: stat.mtime.toISOString(),
+      size: stat.size,
+    });
+  } catch (err) {
+    console.error('Error reading handoff file:', err);
+    res.status(500).json({ error: 'Failed to read handoff file' });
+  }
+});
+
 // Routes
 app.use('/api/memories', memoriesRouter);
 app.use('/api/diary', diaryRouter);

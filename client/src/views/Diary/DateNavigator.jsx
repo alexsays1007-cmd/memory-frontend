@@ -1,6 +1,6 @@
 import './DateNavigator.css';
 
-export default function DateNavigator({ dates, currentDate, onDateChange }) {
+export default function DateNavigator({ dates, currentDate, onDateChange, onCalendarOpen }) {
   const currentIndex = dates.indexOf(currentDate);
 
   const goToPrev = () => {
@@ -41,9 +41,9 @@ export default function DateNavigator({ dates, currentDate, onDateChange }) {
           </svg>
         </button>
 
-        <span className="current-month">
+        <button className="current-month" onClick={onCalendarOpen} title="打开日历">
           {formatMonthYear(currentDate)}
-        </span>
+        </button>
 
         <button
           className="date-nav-btn"

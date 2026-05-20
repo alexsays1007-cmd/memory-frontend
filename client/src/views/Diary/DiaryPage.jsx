@@ -3,6 +3,7 @@ import { getDiaryDates, getDiaryByDate, updateDiaryEntry, hideDiaryEntry } from 
 import DateNavigator from './DateNavigator';
 import DiaryEntry from './DiaryEntry';
 import DiaryCalendar from './DiaryCalendar';
+import HandoffModal from './HandoffModal';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './DiaryPage.css';
@@ -13,6 +14,7 @@ export default function DiaryPage() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showHandoff, setShowHandoff] = useState(false);
 
   // Load dates
   useEffect(() => {
@@ -96,17 +98,19 @@ export default function DiaryPage() {
           <span className="page-subtitle">DIARY CAPSULE</span>
         </div>
       </div>
-      <button 
-        className="calendar-btn"
-        onClick={() => setShowCalendar(!showCalendar)}
-        aria-label="Open diary calendar"
+      <button
+        className="handoff-btn"
+        onClick={() => setShowHandoff(true)}
+        aria-label="Open handoff note"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
         </svg>
+        <span className="handoff-btn-label">今日便签</span>
       </button>
     </div>
   );
@@ -115,6 +119,10 @@ export default function DiaryPage() {
     return (
       <div className="diary-page">
         {pageHeader}
+        <HandoffModal
+          open={showHandoff}
+          onClose={() => setShowHandoff(false)}
+        />
         <EmptyState message="No diary entries found" icon="📔" />
       </div>
     );
@@ -138,6 +146,12 @@ export default function DiaryPage() {
         dates={dates}
         currentDate={currentDate}
         onDateChange={setCurrentDate}
+        onCalendarOpen={() => setShowCalendar(!showCalendar)}
+      />
+
+      <HandoffModal
+        open={showHandoff}
+        onClose={() => setShowHandoff(false)}
       />
 
       <div className="diary-paper-decoration" />

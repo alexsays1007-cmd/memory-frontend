@@ -36,3 +36,8 @@ export function restoreDiaryEntry(id) {
     method: 'POST',
   });
 }
+
+/** Fetch handoff.md content */
+export function getHandoff() {
+  return fetchApi('/handoff');
+}

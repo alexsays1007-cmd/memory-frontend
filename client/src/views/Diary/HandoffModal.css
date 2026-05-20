@@ -1,0 +1,290 @@
+/* ================================================
+   Handoff Modal – Desktop Card / Mobile Bottom Sheet
+   ================================================ */
+
+.handoff-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: handoffOverlayIn 0.2s ease-out;
+}
+
+@keyframes handoffOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Desktop: centered card */
+.handoff-card {
+  width: 90%;
+  max-width: 560px;
+  max-height: 78vh;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: handoffCardIn 0.25s ease-out;
+}
+
+@keyframes handoffCardIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 600px) {
+  .handoff-overlay {
+    align-items: flex-end;
+  }
+
+  .handoff-sheet {
+    width: 100%;
+    max-height: 85vh;
+    background-color: var(--bg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: handoffSheetUp 0.25s ease-out;
+  }
+
+  @keyframes handoffSheetUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+.handoff-handle {
+  width: 36px;
+  height: 4px;
+  background-color: var(--border);
+  border-radius: 2px;
+  margin: 8px auto 4px;
+}
+
+/* Header */
+.handoff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border-light, var(--border));
+  flex-shrink: 0;
+}
+
+.handoff-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.handoff-title-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+.handoff-title-text {
+  font-family: var(--font-title);
+  font-size: 15px;
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+}
+
+.handoff-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.handoff-updated {
+  font-family: var(--font-title);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.handoff-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.handoff-action-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.handoff-action-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+/* Body */
+.handoff-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+.handoff-loading {
+  text-align: center;
+  color: var(--text-muted);
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-style: italic;
+  padding: 40px 0;
+}
+
+/* ================================================
+   Markdown Styling – "Letter paper" feel
+   ================================================ */
+.handoff-markdown {
+  font-family: var(--font-title);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-main);
+}
+
+.handoff-markdown h1 {
+  font-family: var(--font-title);
+  font-size: 20px;
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.handoff-markdown h2 {
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: var(--font-medium);
+  color: var(--accent-text, var(--accent));
+  margin: 20px 0 8px;
+}
+
+.handoff-markdown h3 {
+  font-size: 14px;
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  margin: 16px 0 6px;
+}
+
+.handoff-markdown p {
+  margin: 6px 0;
+}
+
+.handoff-markdown blockquote {
+  margin: 10px 0;
+  padding: 8px 14px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background-color: var(--surface-soft, var(--surface));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.handoff-markdown ul,
+.handoff-markdown ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.handoff-markdown li {
+  margin: 3px 0;
+}
+
+.handoff-markdown code {
+  font-size: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm, 3px);
+  color: var(--accent-text, var(--accent));
+}
+
+.handoff-markdown pre {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  overflow-x: auto;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.handoff-markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-main);
+}
+
+.handoff-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border-light, var(--border));
+  margin: 16px 0;
+}
+
+.handoff-markdown strong {
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+}
+
+.handoff-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.handoff-markdown th,
+.handoff-markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.handoff-markdown th {
+  background-color: var(--surface);
+  font-weight: var(--font-medium);
+}
+
+/* Mobile body adjustments */
+@media (max-width: 600px) {
+  .handoff-body {
+    padding: 14px 16px 20px;
+  }
+
+  .handoff-markdown {
+    font-size: 13px;
+  }
+
+  .handoff-markdown h1 {
+    font-size: 18px;
+  }
+
+  .handoff-markdown h2 {
+    font-size: 15px;
+  }
+}
