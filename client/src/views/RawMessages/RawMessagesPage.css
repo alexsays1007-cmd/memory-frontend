@@ -741,4 +741,68 @@
     padding: 8px 14px;
     font-size: 12px;
   }
+
+  .back-to-search-btn {
+    bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom) + 12px);
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+}
+
+/* ================================================
+   Back to Search Button
+   ================================================ */
+.back-to-search-btn {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 92px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--accent-soft, var(--border));
+  border-radius: var(--radius-full);
+  color: var(--accent);
+  font-family: var(--font-title);
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+  z-index: calc(var(--z-sticky) + 2);
+  transition: all var(--transition-fast);
+  animation: slideUpIn 0.25s ease-out;
+}
+
+.back-to-search-btn:hover {
+  background-color: var(--surface);
+  border-color: var(--accent);
+}
+
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Context switch transition */
+.stream-messages.stream-fade-out {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.stream-messages.stream-fade-in {
+  opacity: 1;
+  transition: opacity 0.3s ease-in;
+}
+
+/* Located message pulse */
+.msg-located {
+  animation: locatePulse 2.5s ease-out;
+}
+
+@keyframes locatePulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  20% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); }
+  100% { box-shadow: none; }
 }

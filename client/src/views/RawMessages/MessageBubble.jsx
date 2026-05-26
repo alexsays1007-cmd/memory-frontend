@@ -16,7 +16,7 @@ function highlightText(text, query) {
   );
 }
 
-export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMatch, bubbleRef, manageMode, selected, onToggleSelect }) {
+export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMatch, bubbleRef, manageMode, selected, onToggleSelect, onLocate }) {
   const [expanded, setExpanded] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
 
@@ -96,6 +96,13 @@ export default function MessageBubble({ message, onUpdate, searchQ, isFocusedMat
           </span>
 
           <div className="msg-actions">
+            {onLocate && (
+              <button className="msg-action-btn msg-locate-btn" onClick={onLocate} title="查看上下文">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                </svg>
+              </button>
+            )}
             <button className="msg-action-btn" onClick={handleCopy} title="复制">
               {copyToast ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>

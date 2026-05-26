@@ -2,7 +2,7 @@ import { formatTime } from '../../utils/date';
 import './TimelineItem.css';
 
 const actionColors = {
-  '摆烂': '#B9B77A',
+  '摆烂': '#D4C5A0',
   '巡逻': '#A8BFA0', // morandi green
   '叫醒': '#C4A4A0', // morandi red/blush
   '写作': '#A0A8B8', // morandi blue-gray

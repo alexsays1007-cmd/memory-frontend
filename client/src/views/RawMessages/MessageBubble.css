@@ -138,6 +138,11 @@
   color: var(--accent);
 }
 
+.msg-locate-btn {
+  opacity: 1 !important;
+  color: var(--accent);
+}
+
 /* Copy toast */
 .msg-toast {
   position: absolute;

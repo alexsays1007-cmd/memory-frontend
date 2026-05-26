@@ -82,6 +82,12 @@ export default function RawMessagesPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [hiding, setHiding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [savedSearch, setSavedSearch] = useState(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const locateMessageIdRef = useRef(null);
+  const restoreScrollRef = useRef(null);
+  const [locateEndUtc, setLocateEndUtc] = useState(null); // endUtc for locate initial load
+  const [loadingNewer, setLoadingNewer] = useState(false);
 
   const searchTimer = useRef(null);
   const matchRefs = useRef([]);
@@ -137,8 +143,12 @@ export default function RawMessagesPage() {
     }
     if (favOnly) params.favorite = 1;
     if (showHidden) params.includeHidden = '1';
+    // Locate mode: restrict endUtc so target falls within loaded 50
+    if (locateEndUtc && !params.startUtc && !params.endUtc) {
+      params.endUtc = locateEndUtc;
+    }
     return params;
-  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden]);
+  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden, locateEndUtc]);
 
   const fetchMessages = useCallback(async (pageNum = 1, loadEarlier = false) => {
     if (loadEarlier) setLoadingMore(true);
@@ -233,6 +243,34 @@ export default function RawMessagesPage() {
     }
   };
 
+  // Load newer messages beyond locateEndUtc
+  const handleLoadNewer = useCallback(async () => {
+    if (!locateEndUtc || loadingNewer) return;
+    setLoadingNewer(true);
+    try {
+      const params = {
+        page: 1,
+        pageSize: PAGE_SIZE,
+        sort: 'desc',
+        startUtc: locateEndUtc,
+      };
+      if (selectedSession) params.session = selectedSession;
+      if (channel) params.channel = channel;
+      const result = await getRawMessages(params);
+      const data = (result.data || []).slice().reverse();
+      if (data.length > 0) {
+        setMessages(prev => [...prev, ...data]);
+        setTotal(prev => prev + data.length);
+      }
+      // Clear the endUtc restriction — all newer messages now loaded
+      setLocateEndUtc(null);
+    } catch (err) {
+      console.error('Failed to load newer messages:', err);
+    } finally {
+      setLoadingNewer(false);
+    }
+  }, [locateEndUtc, loadingNewer, selectedSession, channel]);
+
   const handleSessionSelect = (sessionId) => {
     setSelectedSession(sessionId || '');
     setSessionTitle(sessionId ? '' : '');
@@ -267,6 +305,94 @@ export default function RawMessagesPage() {
     setManageMode(false);
     setSelectedIds(new Set());
   };
+
+  const handleLocateMessage = useCallback((msg) => {
+    if (!msg.session) return;
+    // Save current search context
+    setSavedSearch({
+      searchQ,
+      searchInput,
+      channel,
+      selectedSession,
+      sessionTitle,
+      scrollY: window.scrollY,
+    });
+    locateMessageIdRef.current = msg.id;
+    // Fade out, then switch context
+    setTransitioning(true);
+    setTimeout(() => {
+      // Set endUtc so target falls within loaded 50 (1 hour buffer after target)
+      const created = getMessageCreated(msg);
+      if (created) {
+        const t = new Date(created).getTime();
+        setLocateEndUtc(new Date(t + 60 * 60 * 1000).toISOString());
+      }
+      // Switch to that session, clear search
+      clearTimeout(searchTimer.current);
+      setSearchInput('');
+      setSearchQ('');
+      setSelectedSession(msg.session);
+      setSessionTitle('');
+      window.scrollTo({ top: 0 });
+    }, 250);
+  }, [searchQ, searchInput, channel, selectedSession, sessionTitle]);
+
+  const handleBackToSearch = useCallback(() => {
+    if (!savedSearch) return;
+    const restoreScrollY = savedSearch.scrollY || 0;
+    setTransitioning(true);
+    setTimeout(() => {
+      clearTimeout(searchTimer.current);
+      setSearchInput(savedSearch.searchInput);
+      setSearchQ(savedSearch.searchQ);
+      setChannel(savedSearch.channel);
+      setSelectedSession(savedSearch.selectedSession);
+      setSessionTitle(savedSearch.sessionTitle);
+      locateMessageIdRef.current = null;
+      setLocateEndUtc(null);
+      setSavedSearch(null);
+      restoreScrollRef.current = restoreScrollY;
+    }, 250);
+  }, [savedSearch]);
+
+  // Clear transition + scroll to located message after messages load
+  useEffect(() => {
+    if (loading) return;
+    // Restore scroll position when returning from locate
+    if (restoreScrollRef.current !== null) {
+      const pos = restoreScrollRef.current;
+      restoreScrollRef.current = null;
+      setTimeout(() => {
+        window.scrollTo({ top: pos });
+        setTimeout(() => setTransitioning(false), 30);
+      }, 50);
+      return;
+    }
+    const targetId = locateMessageIdRef.current;
+    if (!targetId) {
+      if (transitioning) setTransitioning(false);
+      return;
+    }
+    // Scroll to target while still faded out, then fade in
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-msg-id="${targetId}"]`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offset = window.scrollY + rect.top - 160;
+        window.scrollTo({ top: Math.max(0, offset) });
+      }
+      setTimeout(() => {
+        setTransitioning(false);
+        if (el) {
+          const bubble = el.querySelector('.msg-bubble') || el;
+          bubble.classList.add('msg-located');
+          setTimeout(() => bubble.classList.remove('msg-located'), 2500);
+        }
+        locateMessageIdRef.current = null;
+      }, 50);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [loading, messages]);
 
   const handleMessageUpdate = (updated) => {
     setMessages(prev => {
@@ -370,17 +496,19 @@ export default function RawMessagesPage() {
 
       const matchPos = matchIndices.indexOf(idx);
       items.push(
-        <MessageBubble
-          key={msg.id || idx}
-          message={msg}
-          onUpdate={handleMessageUpdate}
-          searchQ={searchQ}
-          isFocusedMatch={matchPos >= 0 && matchPos === focusedMatchIdx}
-          bubbleRef={matchPos >= 0 ? matchRefs.current[matchPos] : undefined}
-          manageMode={manageMode}
-          selected={selectedIds.has(msg.id)}
-          onToggleSelect={() => toggleSelectId(msg.id)}
-        />
+        <div key={msg.id || idx} data-msg-id={msg.id}>
+          <MessageBubble
+            message={msg}
+            onUpdate={handleMessageUpdate}
+            searchQ={searchQ}
+            isFocusedMatch={matchPos >= 0 && matchPos === focusedMatchIdx}
+            bubbleRef={matchPos >= 0 ? matchRefs.current[matchPos] : undefined}
+            manageMode={manageMode}
+            selected={selectedIds.has(msg.id)}
+            onToggleSelect={() => toggleSelectId(msg.id)}
+            onLocate={searchQ && msg.session ? () => handleLocateMessage(msg) : undefined}
+          />
+        </div>
       );
     });
 
@@ -644,7 +772,7 @@ export default function RawMessagesPage() {
         />
       )}
 
-      <div className="stream-messages">
+      <div className={`stream-messages ${transitioning ? 'stream-fade-out' : 'stream-fade-in'}`}>
         {loading ? (
           <LoadingSpinner />
         ) : visibleMessages.length === 0 ? (
@@ -664,9 +792,30 @@ export default function RawMessagesPage() {
             )}
 
             {renderMessages()}
+
+            {locateEndUtc && (
+              <div className="stream-pagination stream-pagination-bottom">
+                {loadingNewer ? (
+                  <span className="stream-loading-text">加载中...</span>
+                ) : (
+                  <button className="stream-load-more" onClick={handleLoadNewer}>
+                    加载更新的消息
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {savedSearch && (
+        <button className="back-to-search-btn" onClick={handleBackToSearch}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          返回搜索结果
+        </button>
+      )}
 
       {showScrollBottom && !manageMode && (
         <button className="scroll-bottom-btn" onClick={scrollToBottom} aria-label="回到底部">

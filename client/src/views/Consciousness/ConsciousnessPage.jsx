@@ -221,20 +221,20 @@ export default function ConsciousnessPage() {
           
           {totalPages > 1 && (
             <div className="pagination-controls">
-              <button 
-                className="page-btn" 
-                disabled={page <= 1} 
-                onClick={() => setPage(p => p - 1)}
+              <button
+                className="page-btn"
+                disabled={page <= 1}
+                onClick={() => { setPage(p => p - 1); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}
               >
                 上一页
               </button>
               <span className="page-info">
                 第 {page} / {totalPages} 页
               </span>
-              <button 
-                className="page-btn" 
-                disabled={page >= totalPages} 
-                onClick={() => setPage(p => p + 1)}
+              <button
+                className="page-btn"
+                disabled={page >= totalPages}
+                onClick={() => { setPage(p => p + 1); setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}
               >
                 下一页
               </button>
