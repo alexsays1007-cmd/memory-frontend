@@ -8,6 +8,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import './ConsciousnessPage.css';
 
 const ACTION_TYPE_ICONS = {
+  '摆烂': '💤',
   '巡逻': '🐾',
   '叫醒': '⏰',
   '写作': '📝',
