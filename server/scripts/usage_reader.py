@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+"""
+Usage reader: Codex (API) + Claude (statusLine file).
+Pure stdlib, no external deps. Returns sanitized data only.
+"""
+import json, os, sys, time, urllib.request
+from datetime import datetime, timezone
+
+HOME = os.path.expanduser("~")
+HISTORY_PATH = os.path.join(HOME, "usage-reader", "usage-history.json")
+DAILY_PACE = round(100 / 7, 4)  # 14.2857
+
+# ── helpers ──────────────────────────────────────────────────
+
+def _recompute(window, drop_expired=False):
+    if not isinstance(window, dict):
+        return None
+    out = dict(window)
+    reset_at = int(out.get("reset_at") or 0)
+    if reset_at > 0:
+        remaining = max(0, int(reset_at - time.time()))
+        if drop_expired and remaining <= 0:
+            return None
+        out["reset_after_seconds"] = remaining
+    return out
+
+def _safe_int(v, default=0):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+def _cycle_day(reset_at, limit_window_seconds=604800):
+    """Compute day-of-cycle (1-7) from window reset_at and duration."""
+    if not reset_at or reset_at <= 0:
+        return None
+    now = time.time()
+    window_start = reset_at - limit_window_seconds
+    if now < window_start:
+        return None
+    elapsed_days = int((now - window_start) / 86400)
+    return max(1, min(7, elapsed_days + 1))
+
+def _pace_status(used_percent, cumulative_pace):
+    if used_percent is None or cumulative_pace is None or cumulative_pace <= 0:
+        return "unknown"
+    if used_percent <= cumulative_pace * 0.9:
+        return "quiet"
+    if used_percent <= cumulative_pace:
+        return "watch"
+    return "over_pace"
+
+def _today_str():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+def _make_pace(used_percent, reset_at, limit_window_seconds=604800):
+    """Build the pace object for a weekly window."""
+    cd = _cycle_day(reset_at, limit_window_seconds)
+    if cd is None:
+        return {"cycleDay": None, "cumulativePacePercent": None, "status": "unknown"}
+    cumulative = round(cd * DAILY_PACE, 4)
+    status = _pace_status(used_percent, cumulative)
+    return {"cycleDay": cd, "cumulativePacePercent": cumulative, "status": status}
+
+# ── history (paceHistory persistence) ────────────────────────
+
+def _load_history():
+    try:
+        with open(HISTORY_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_history(data):
+    try:
+        os.makedirs(os.path.dirname(HISTORY_PATH), exist_ok=True)
+        tmp = HISTORY_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, HISTORY_PATH)
+    except Exception:
+        pass
+
+def _prune_history(data, current_reset_ats):
+    """Keep only cycles whose reset_at is in current_reset_ats or the most recent past cycle."""
+    for provider in ("claude", "codex"):
+        cycles = data.get(provider, {})
+        if not cycles:
+            continue
+        # Sort keys (reset_at strings) descending
+        sorted_keys = sorted(cycles.keys(), reverse=True)
+        keep = set()
+        # Keep current cycle
+        for ra in current_reset_ats.get(provider, []):
+            ra_str = str(ra)
+            if ra_str in cycles:
+                keep.add(ra_str)
+        # Keep most recent past cycle not already kept
+        for k in sorted_keys:
+            if k not in keep:
+                keep.add(k)
+                break
+        # Remove others
+        for k in list(cycles.keys()):
+            if k not in keep:
+                del cycles[k]
+
+def _record_snapshot(provider, weekly_used_percent, weekly_reset_at):
+    """Record today's weekly usage snapshot for paceHistory."""
+    if weekly_used_percent is None or not weekly_reset_at:
+        return
+    ra_str = str(int(weekly_reset_at))
+    today = _today_str()
+    limit_ws = 604800  # 7 days
+    cd = _cycle_day(weekly_reset_at, limit_ws)
+
+    history = _load_history()
+    provider_cycles = history.setdefault(provider, {})
+    day_entries = provider_cycles.setdefault(ra_str, [])
+
+    # Find or create today's entry
+    entry = None
+    for e in day_entries:
+        if e.get("date") == today:
+            entry = e
+            break
+    if entry is None:
+        entry = {"date": today}
+        day_entries.append(entry)
+
+    entry["cycleDay"] = cd
+    entry["date"] = today
+    entry["usedPercent"] = weekly_used_percent
+    entry["weeklyResetAt"] = int(weekly_reset_at)
+    entry["cumulativePacePercent"] = round(cd * DAILY_PACE, 4) if cd else None
+    entry["status"] = _pace_status(weekly_used_percent, entry["cumulativePacePercent"])
+    entry["capturedAt"] = int(time.time())
+
+    _save_history(history)
+
+def _get_pace_history(provider, weekly_reset_at):
+    """Get paceHistory array for current cycle."""
+    if not weekly_reset_at:
+        return []
+    ra_str = str(int(weekly_reset_at))
+    history = _load_history()
+    entries = history.get(provider, {}).get(ra_str, [])
+    # Return sorted by cycleDay
+    return sorted(entries, key=lambda e: e.get("cycleDay") or 0)
+
+# ── Codex ────────────────────────────────────────────────────
+
+class CodexUsageReader:
+    def __init__(self):
+        self._auth = os.path.join(HOME, ".codex", "auth.json")
+        self._cache = os.path.join(HOME, ".codex", "usage-limits.json")
+        self._mem = None
+        self._mem_at = 0.0
+
+    def _token(self):
+        try:
+            with open(self._auth, encoding="utf-8") as f:
+                d = json.load(f)
+            t = d.get("tokens") or {}
+            return t.get("access_token", ""), t.get("account_id", "")
+        except Exception:
+            return "", ""
+
+    def _fetch(self):
+        tok, aid = self._token()
+        if not tok:
+            return {"available": False, "error": "no_token"}
+        headers = {
+            "Authorization": "Bearer " + tok,
+            "OpenAI-Beta": "codex_cli",
+            "User-Agent": "CcCompanion/usage-reader",
+        }
+        if aid:
+            headers["ChatGPT-Account-ID"] = aid
+        req = urllib.request.Request(
+            "https://chatgpt.com/backend-api/codex/usage", headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=12) as r:
+            return json.loads(r.read())
+
+    def _simplify(self, raw):
+        def _win(w):
+            if not isinstance(w, dict):
+                return {}
+            return {
+                "used_percent": _safe_int(w.get("used_percent")),
+                "limit_window_seconds": _safe_int(w.get("limit_window_seconds")),
+                "reset_after_seconds": _safe_int(w.get("reset_after_seconds")),
+                "reset_at": _safe_int(w.get("reset_at")),
+            }
+
+        plan = raw.get("plan_type") or raw.get("plan") or ""
+
+        # API nests under rate_limit with _window suffix
+        rl = raw.get("rate_limit") or {}
+        primary = _win(rl.get("primary_window") or raw.get("primary"))
+        secondary = _win(rl.get("secondary_window") or raw.get("secondary"))
+        allowed = bool(rl.get("allowed", raw.get("allowed", True)))
+        limit_reached = bool(rl.get("limit_reached", raw.get("limit_reached", False)))
+
+        additional = []
+        for item in (raw.get("additional_rate_limits") or []):
+            additional.append({
+                "model": item.get("model") or item.get("name") or "",
+                "primary": _win(item.get("primary")),
+                "secondary": _win(item.get("secondary")),
+            })
+
+        credits_raw = raw.get("credits") or {}
+        credits = {
+            "balance": _safe_int(credits_raw.get("balance")),
+            "has_credits": bool(credits_raw.get("has_credits")),
+            "overage": bool(credits_raw.get("overage_limit_reached")),
+        }
+
+        return {
+            "available": True,
+            "stale": False,
+            "plan": plan,
+            "allowed": allowed,
+            "limit_reached": limit_reached,
+            "primary": primary,
+            "secondary": secondary,
+            "additional": additional,
+            "credits": credits,
+        }
+
+    def _normalize(self, d):
+        out = dict(d)
+        out["primary"] = _recompute(out.get("primary"))
+        out["secondary"] = _recompute(out.get("secondary"))
+        out["additional"] = [
+            {**it, "primary": _recompute(it.get("primary")), "secondary": _recompute(it.get("secondary"))}
+            for it in (out.get("additional") or [])
+        ]
+        return out
+
+    def _write_cache(self, data):
+        try:
+            with open(self._cache, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+            os.chmod(self._cache, 0o600)
+        except Exception:
+            pass
+
+    def _read_cache(self):
+        try:
+            with open(self._cache, encoding="utf-8") as f:
+                d = json.load(f)
+            if isinstance(d, dict) and d.get("available"):
+                d["stale"] = True
+                return self._normalize(d)
+        except Exception:
+            pass
+        return None
+
+    def get(self):
+        now = time.time()
+        if self._mem and now - self._mem_at < 5:
+            return self._normalize(self._mem)
+        try:
+            raw = self._fetch()
+            result = self._simplify(raw)
+            self._mem = result
+            self._mem_at = now
+            self._write_cache(result)
+            return self._normalize(result)
+        except Exception:
+            cached = self._read_cache()
+            if cached:
+                return cached
+            return {"available": False, "error": "fetch_failed"}
+
+# ── Claude (statusLine file) ─────────────────────────────────
+
+class ClaudeRateLimitReader:
+    def __init__(self):
+        self._path = os.path.join(HOME, ".claude", "rate_limits_latest.json")
+        self._max_age = 120
+
+    def get(self):
+        try:
+            with open(self._path, encoding="utf-8") as f:
+                d = json.load(f)
+        except FileNotFoundError:
+            return {"available": False, "error": "claude_statusline_not_seen_yet"}
+        except Exception:
+            return {"available": False, "error": "read_failed"}
+        if not isinstance(d, dict) or not d.get("available"):
+            return {"available": False, "error": "no_data"}
+        updated_at = _safe_int(d.get("updated_at"))
+        stale = updated_at <= 0 or (time.time() - updated_at) > self._max_age
+        return {
+            "available": True,
+            "stale": stale,
+            "model": d.get("model") or "",
+            "five_hour": _recompute(d.get("five_hour"), drop_expired=True),
+            "seven_day": _recompute(d.get("seven_day"), drop_expired=True),
+        }
+
+# ── combined ─────────────────────────────────────────────────
+
+def get_all():
+    claude = ClaudeRateLimitReader().get()
+    codex = CodexUsageReader().get()
+
+    # Record daily snapshots for paceHistory
+    if claude.get("available") and claude.get("seven_day"):
+        _record_snapshot("claude", claude["seven_day"].get("used_percent"), claude["seven_day"].get("reset_at"))
+    if codex.get("available") and codex.get("secondary"):
+        _record_snapshot("codex", codex["secondary"].get("used_percent"), codex["secondary"].get("reset_at"))
+
+    # Prune old cycles
+    current_ras = {}
+    if claude.get("available") and claude.get("seven_day", {}).get("reset_at"):
+        current_ras["claude"] = [claude["seven_day"]["reset_at"]]
+    if codex.get("available") and codex.get("secondary", {}).get("reset_at"):
+        current_ras["codex"] = [codex["secondary"]["reset_at"]]
+    _prune_history(_load_history(), current_ras)
+
+    return {"codex": codex, "claude": claude}
+
+if __name__ == "__main__":
+    print(json.dumps(get_all(), indent=2, ensure_ascii=False))

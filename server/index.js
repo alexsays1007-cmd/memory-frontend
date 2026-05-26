@@ -8,6 +8,8 @@ import memoriesRouter from './routes/memories.js';
 import diaryRouter from './routes/diary.js';
 import consciousnessRouter from './routes/consciousness.js';
 import rawMessagesRouter from './routes/rawMessages.js';
+import usageRouter from './routes/usage.js';
+import forgeRouter from './routes/forge.js';
 import { closeDb, getDbInfo } from './db/index.js';
 
 const app = express();
@@ -82,6 +84,8 @@ app.use('/api/memories', memoriesRouter);
 app.use('/api/diary', diaryRouter);
 app.use('/api/consciousness', consciousnessRouter);
 app.use('/api/raw-messages', rawMessagesRouter);
+app.use('/api/usage', usageRouter);
+app.use('/api/forge', forgeRouter);
 
 if (hasClientDist) {
   app.use(express.static(clientDistPath));
