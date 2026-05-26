@@ -5,7 +5,7 @@ statusLine wrapper for Claude Code.
 2) Forwards stdin to original claude-hud command for display.
 If capture fails, claude-hud still runs (never breaks Claude Code).
 """
-import json, os, subprocess, sys, time
+import fcntl, glob, json, os, struct, subprocess, sys, termios, time
 
 CLAUDE_HUD_CMD = [
     "/home/claude/.bun/bin/bun", "--env-file", "/dev/null",
@@ -13,9 +13,27 @@ CLAUDE_HUD_CMD = [
 OUT = os.path.expanduser("~/.claude/rate_limits_latest.json")
 
 
+def _get_columns():
+    """Get terminal columns, matching original statusLine: cols - 4, min 1."""
+    cols = 0
+    try:
+        cols = os.get_terminal_size(0).columns
+    except Exception:
+        pass
+    if not cols:
+        try:
+            with open("/dev/tty") as tty:
+                s = fcntl.ioctl(tty.fileno(), termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+                cols = struct.unpack("HHHH", s)[1]
+        except Exception:
+            pass
+    if not cols:
+        cols = 120
+    return max(1, cols - 4) if cols > 4 else 1
+
+
 def _find_hud_script():
     """Locate the latest claude-hud plugin dist/index.js."""
-    import glob
     base = os.path.expanduser("~/.claude/plugins/cache")
     candidates = []
     for d in glob.glob(os.path.join(base, "*", "claude-hud", "*", "")):
@@ -77,9 +95,11 @@ def main():
         print("Claude", end="")
         return
     try:
+        env = {**os.environ, "COLUMNS": str(_get_columns())}
         proc = subprocess.run(
             CLAUDE_HUD_CMD + [hud_script],
             input=raw_text, capture_output=True, text=True, timeout=10,
+            env=env,
         )
         if proc.stdout:
             print(proc.stdout, end="")
