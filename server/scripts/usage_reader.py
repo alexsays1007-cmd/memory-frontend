@@ -106,7 +106,19 @@ def _prune_history(data, current_reset_ats):
             if k not in keep:
                 del cycles[k]
 
-def _record_snapshot(provider, weekly_used_percent, weekly_reset_at):
+def _dedup_cycle_days(day_entries):
+    """Remove duplicate entries with the same cycleDay, keeping the most recent."""
+    seen = {}
+    for e in day_entries:
+        cd = e.get("cycleDay")
+        if cd is None:
+            continue
+        prev = seen.get(cd)
+        if prev is None or e.get("capturedAt", 0) > prev.get("capturedAt", 0):
+            seen[cd] = e
+    day_entries[:] = list(seen.values())
+
+def _record_snapshot(provider, weekly_used_percent, weekly_reset_at, source="live"):
     """Record today's weekly usage snapshot for paceHistory."""
     if weekly_used_percent is None or not weekly_reset_at:
         return
@@ -119,14 +131,17 @@ def _record_snapshot(provider, weekly_used_percent, weekly_reset_at):
     provider_cycles = history.setdefault(provider, {})
     day_entries = provider_cycles.setdefault(ra_str, [])
 
-    # Find or create today's entry
+    # Deduplicate legacy entries with same cycleDay
+    _dedup_cycle_days(day_entries)
+
+    # Find existing entry by cycleDay (not date)
     entry = None
     for e in day_entries:
-        if e.get("date") == today:
+        if e.get("cycleDay") == cd:
             entry = e
             break
     if entry is None:
-        entry = {"date": today}
+        entry = {}
         day_entries.append(entry)
 
     entry["cycleDay"] = cd
@@ -135,6 +150,7 @@ def _record_snapshot(provider, weekly_used_percent, weekly_reset_at):
     entry["weeklyResetAt"] = int(weekly_reset_at)
     entry["cumulativePacePercent"] = round(cd * DAILY_PACE, 4) if cd else None
     entry["status"] = _pace_status(weekly_used_percent, entry["cumulativePacePercent"])
+    entry["source"] = source
     entry["capturedAt"] = int(time.time())
 
     _save_history(history)
@@ -263,10 +279,15 @@ class CodexUsageReader:
     def get(self):
         now = time.time()
         if self._mem and now - self._mem_at < 5:
-            return self._normalize(self._mem)
+            result = self._normalize(self._mem)
+            result["source"] = "live"
+            return result
         try:
             raw = self._fetch()
+            if not raw.get("available", True):
+                raise RuntimeError(raw.get("error", "api_unavailable"))
             result = self._simplify(raw)
+            result["source"] = "live"
             self._mem = result
             self._mem_at = now
             self._write_cache(result)
@@ -274,8 +295,9 @@ class CodexUsageReader:
         except Exception:
             cached = self._read_cache()
             if cached:
+                cached["source"] = "cache"
                 return cached
-            return {"available": False, "error": "fetch_failed"}
+            return {"available": False, "error": "fetch_failed", "source": "none"}
 
 # ── Claude (statusLine file) ─────────────────────────────────
 
@@ -299,6 +321,7 @@ class ClaudeRateLimitReader:
         return {
             "available": True,
             "stale": stale,
+            "source": "live",
             "model": d.get("model") or "",
             "five_hour": _recompute(d.get("five_hour"), drop_expired=True),
             "seven_day": _recompute(d.get("seven_day"), drop_expired=True),
@@ -312,9 +335,11 @@ def get_all():
 
     # Record daily snapshots for paceHistory
     if claude.get("available") and claude.get("seven_day"):
-        _record_snapshot("claude", claude["seven_day"].get("used_percent"), claude["seven_day"].get("reset_at"))
+        _record_snapshot("claude", claude["seven_day"].get("used_percent"),
+                         claude["seven_day"].get("reset_at"), source=claude.get("source", "live"))
     if codex.get("available") and codex.get("secondary"):
-        _record_snapshot("codex", codex["secondary"].get("used_percent"), codex["secondary"].get("reset_at"))
+        _record_snapshot("codex", codex["secondary"].get("used_percent"),
+                         codex["secondary"].get("reset_at"), source=codex.get("source", "live"))
 
     # Prune old cycles
     current_ras = {}

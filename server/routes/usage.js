@@ -86,6 +86,7 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
         usedPercent: e.usedPercent,
         cumulativePacePercent: e.cumulativePacePercent,
         status: e.status,
+        source: e.source || "live",
       }))
       .sort((a, b) => (a.cycleDay || 0) - (b.cycleDay || 0));
   } catch {}
@@ -113,7 +114,8 @@ function mapClaude(raw) {
     available: true, stale: !!raw.stale,
     session: mapSession(raw.five_hour),
     weekly: mapWeekly(raw.seven_day, "claude"),
-    warning: isWarning(raw.five_hour, raw.seven_day), error: null,
+    warning: isWarning(raw.five_hour, raw.seven_day),
+    error: raw.error || null,
   };
 }
 
@@ -132,7 +134,8 @@ function mapCodex(raw) {
     available: true, stale: !!raw.stale,
     session: mapSession(primary),
     weekly: mapWeekly(secondary, "codex", secondary?.limit_window_seconds || 604800),
-    warning: isWarning(raw.primary, raw.secondary), error: null,
+    warning: isWarning(raw.primary, raw.secondary),
+    error: raw.error || null,
   };
 }
 
