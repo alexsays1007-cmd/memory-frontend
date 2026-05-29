@@ -404,7 +404,7 @@ export default function RawMessagesPage() {
   };
 
   const visibleMessages = showHidden
-    ? messages.filter(m => m.hidden === 1 || m.hidden === true)
+    ? messages
     : messages.filter(m => !isSystemOrHidden(m));
 
   // Find indices of messages that match the search query (client-side)

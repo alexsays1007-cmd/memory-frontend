@@ -46,7 +46,9 @@ function buildWhere(query) {
   const where = [];
   const params = {};
 
-  if (query.includeHidden !== '1') {
+  if (query.includeHidden === '1') {
+    where.push('COALESCE(hidden, 0) = 1');
+  } else {
     where.push('COALESCE(hidden, 0) = 0');
   }
 
@@ -315,7 +317,9 @@ router.get('/dates', (req, res) => {
       where.push('agent = @agent');
       params.agent = String(req.query.agent);
     }
-    if (req.query.includeHidden !== '1') {
+    if (req.query.includeHidden === '1') {
+      where.push('COALESCE(hidden, 0) = 1');
+    } else {
       where.push('COALESCE(hidden, 0) = 0');
     }
 
