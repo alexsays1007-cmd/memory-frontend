@@ -72,6 +72,7 @@ export default function RawMessagesPage() {
   const [channels, setChannels] = useState([]);
   const [dateSummary, setDateSummary] = useState([]);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [showDateChips, setShowDateChips] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [focusedMatchIdx, setFocusedMatchIdx] = useState(-1);
@@ -107,13 +108,14 @@ export default function RawMessagesPage() {
   }, []);
 
   useEffect(() => {
-    const updateScrollButton = () => {
+    const updateScrollButtons = () => {
       const distanceToBottom = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
       setShowScrollBottom(distanceToBottom > 600);
+      setShowScrollTop(window.scrollY > 600);
     };
-    updateScrollButton();
-    window.addEventListener('scroll', updateScrollButton, { passive: true });
-    return () => window.removeEventListener('scroll', updateScrollButton);
+    updateScrollButtons();
+    window.addEventListener('scroll', updateScrollButtons, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollButtons);
   }, []);
 
   useEffect(() => {
@@ -123,11 +125,16 @@ export default function RawMessagesPage() {
       .catch(console.error);
   }, [channel]);
 
+  // When a date filter is active, sort ascending so messages start from morning
+  const hasDateFilter = (dateMode === 'single' && selectedDate)
+    || (dateMode === 'range' && rangeStart && rangeEnd);
+  const sortOrder = hasDateFilter ? 'asc' : 'desc';
+
   const buildParams = useCallback((pageNum) => {
     const params = {
       page: pageNum,
       pageSize: PAGE_SIZE,
-      sort: 'desc',
+      sort: sortOrder,
     };
     if (channel) params.channel = channel;
     if (selectedSession) params.session = selectedSession;
@@ -148,17 +155,20 @@ export default function RawMessagesPage() {
       params.endUtc = locateEndUtc;
     }
     return params;
-  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden, locateEndUtc]);
+  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden, locateEndUtc, sortOrder]);
 
-  const fetchMessages = useCallback(async (pageNum = 1, loadEarlier = false) => {
-    if (loadEarlier) setLoadingMore(true);
+  const fetchMessages = useCallback(async (pageNum = 1, append = false) => {
+    if (append) setLoadingMore(true);
     else setLoading(true);
 
     try {
       const result = await getRawMessages(buildParams(pageNum));
-      const data = (result.data || []).slice().reverse();
-      if (loadEarlier) {
-        setMessages(prev => [...data, ...prev]);
+      // desc: newest first from API, reverse for chronological display → load earlier = prepend
+      // asc: oldest first from API, already chronological → load more = append
+      const isAsc = sortOrder === 'asc';
+      const data = isAsc ? (result.data || []) : (result.data || []).slice().reverse();
+      if (append) {
+        setMessages(prev => isAsc ? [...prev, ...data] : [...data, ...prev]);
       } else {
         setMessages(data);
       }
@@ -170,7 +180,7 @@ export default function RawMessagesPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [buildParams]);
+  }, [buildParams, sortOrder]);
 
   useEffect(() => {
     fetchMessages(1);
@@ -227,6 +237,10 @@ export default function RawMessagesPage() {
     setRangeStart('');
     setRangeEnd('');
     setShowDateChips(false);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const scrollToBottom = () => {
@@ -520,8 +534,6 @@ export default function RawMessagesPage() {
     acc[d.date] = d.total;
     return acc;
   }, {});
-  const hasDateFilter = (dateMode === 'single' && selectedDate)
-    || (dateMode === 'range' && rangeStart && rangeEnd);
 
   const formatDateLabel = () => {
     if (dateMode === 'single' && selectedDate) {
@@ -732,45 +744,45 @@ export default function RawMessagesPage() {
             )}
           </div>
         )}
-      </div>
 
-      {showDateChips && !showDatePicker && (() => {
-        const recentDates = dateSummary.slice(0, 7);
-        const chipMax = recentDates.length ? Math.max(...recentDates.map(d => d.total)) : 0;
-        return (
-          <div className="stream-date-chips-panel">
-            {recentDates.map(d => (
-              <button
-                key={d.date}
-                className={`stream-qchip ${chipHeatClass(d.total, chipMax)} ${selectedDate === d.date ? 'active' : ''}`}
-                onClick={() => handleChipDateClick(d.date)}
-              >
-                {d.date.slice(5).replace('-', '/')}
-                <span className="stream-qchip-count">{d.total}</span>
+        {showDateChips && !showDatePicker && (() => {
+          const recentDates = dateSummary.slice(0, 7);
+          const chipMax = recentDates.length ? Math.max(...recentDates.map(d => d.total)) : 0;
+          return (
+            <div className="stream-date-chips-panel">
+              {recentDates.map(d => (
+                <button
+                  key={d.date}
+                  className={`stream-qchip ${chipHeatClass(d.total, chipMax)} ${selectedDate === d.date ? 'active' : ''}`}
+                  onClick={() => handleChipDateClick(d.date)}
+                >
+                  {d.date.slice(5).replace('-', '/')}
+                  <span className="stream-qchip-count">{d.total}</span>
+                </button>
+              ))}
+              <button className="stream-qchip stream-qchip-more" onClick={openFullCalendar}>
+                更多日期...
               </button>
-            ))}
-            <button className="stream-qchip stream-qchip-more" onClick={openFullCalendar}>
-              更多日期...
-            </button>
-          </div>
-        );
-      })()}
+            </div>
+          );
+        })()}
 
-      {showDatePicker && (
-        <StreamCalendar
-          dates={calendarDates}
-          dateCounts={calendarDateCounts}
-          selectedDate={selectedDate}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          mode={dateMode}
-          onModeChange={setDateMode}
-          onDateSelect={handleDateSelect}
-          onRangeSelect={handleRangeSelect}
-          onClear={clearAllDates}
-          onClose={() => setShowDatePicker(false)}
-        />
-      )}
+        {showDatePicker && (
+          <StreamCalendar
+            dates={calendarDates}
+            dateCounts={calendarDateCounts}
+            selectedDate={selectedDate}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            mode={dateMode}
+            onModeChange={setDateMode}
+            onDateSelect={handleDateSelect}
+            onRangeSelect={handleRangeSelect}
+            onClear={clearAllDates}
+            onClose={() => setShowDatePicker(false)}
+          />
+        )}
+      </div>
 
       <div className={`stream-messages ${transitioning ? 'stream-fade-out' : 'stream-fade-in'}`}>
         {loading ? (
@@ -779,7 +791,7 @@ export default function RawMessagesPage() {
           <EmptyState message="暂无对话消息" icon="💬" />
         ) : (
           <>
-            {hasMore && (
+            {hasMore && sortOrder === 'desc' && (
               <div className="stream-pagination stream-pagination-top">
                 {loadingMore ? (
                   <span className="stream-loading-text">加载中...</span>
@@ -792,6 +804,18 @@ export default function RawMessagesPage() {
             )}
 
             {renderMessages()}
+
+            {hasMore && sortOrder === 'asc' && (
+              <div className="stream-pagination stream-pagination-bottom">
+                {loadingMore ? (
+                  <span className="stream-loading-text">加载中...</span>
+                ) : (
+                  <button className="stream-load-more" onClick={handleLoadEarlier}>
+                    加载更多消息 ({messages.length} / {total})
+                  </button>
+                )}
+              </div>
+            )}
 
             {locateEndUtc && (
               <div className="stream-pagination stream-pagination-bottom">
@@ -814,6 +838,15 @@ export default function RawMessagesPage() {
             <polyline points="15 18 9 12 15 6"/>
           </svg>
           返回搜索结果
+        </button>
+      )}
+
+      {showScrollTop && !manageMode && (
+        <button className="scroll-top-btn" onClick={scrollToTop} aria-label="回到顶部">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 19V5"/>
+            <path d="M5 12l7-7 7 7"/>
+          </svg>
         </button>
       )}
 
