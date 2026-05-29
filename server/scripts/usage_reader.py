@@ -10,6 +10,7 @@ HOME = os.path.expanduser("~")
 HISTORY_PATH = os.path.join(HOME, "usage-reader", "usage-history.json")
 DAILY_PACE = round(100 / 7, 4)  # 14.2857
 REFRESH_DROP_THRESHOLD = 20  # percent
+RESET_AT_TOLERANCE = 5  # seconds
 
 # ── helpers ──────────────────────────────────────────────────
 
@@ -63,6 +64,22 @@ def _make_pace(used_percent, reset_at, limit_window_seconds=604800):
     status = _pace_status(used_percent, cumulative)
     return {"cycleDay": cd, "cumulativePacePercent": cumulative, "status": status}
 
+def _find_canonical_key(existing_keys, target, tolerance=RESET_AT_TOLERANCE):
+    """If any existing key is within tolerance of target, return that key.
+    Otherwise return str(target). Prefers the numerically smallest (earliest) key."""
+    target_int = int(target)
+    candidates = []
+    for k in existing_keys:
+        try:
+            diff = abs(int(k) - target_int)
+            if diff <= tolerance:
+                candidates.append(k)
+        except (ValueError, TypeError):
+            continue
+    if candidates:
+        return min(candidates, key=lambda x: int(x))
+    return str(target_int)
+
 # ── history (paceHistory persistence) ────────────────────────
 
 def _load_history():
@@ -95,7 +112,19 @@ def _dedup_cycle_days(day_entries):
             seen[cd] = e
     day_entries[:] = list(seen.values())
 
-def _check_quota_refresh(history, provider, ra_str, new_used_percent, new_reset_at, source):
+def _collect_entries_near_key(provider_cycles, target_key, tolerance=RESET_AT_TOLERANCE):
+    """Collect entries from all groups within tolerance of target_key."""
+    target_int = int(target_key)
+    merged = []
+    for k, entries in provider_cycles.items():
+        try:
+            if abs(int(k) - target_int) <= tolerance:
+                merged.extend(entries)
+        except (ValueError, TypeError):
+            continue
+    return merged
+
+def _check_quota_refresh(history, provider, canonical_key, new_used_percent, new_reset_at, source):
     """Compare with most recent previous snapshot; record event if big drop.
 
     Only triggers for source="live" to avoid false positives from stale cache data.
@@ -104,7 +133,8 @@ def _check_quota_refresh(history, provider, ra_str, new_used_percent, new_reset_
     if source != "live":
         return None
 
-    entries = history.get(provider, {}).get(ra_str, [])
+    provider_cycles = history.get(provider, {})
+    entries = _collect_entries_near_key(provider_cycles, canonical_key)
     if not entries:
         return None
 
@@ -115,8 +145,9 @@ def _check_quota_refresh(history, provider, ra_str, new_used_percent, new_reset_
 
     if prev_pct is None or prev_ra is None:
         return None
-    if int(prev_ra) != int(new_reset_at):
-        return None  # different cycle, not a refresh
+    # Use tolerance for cycle match
+    if abs(int(prev_ra) - int(new_reset_at)) > RESET_AT_TOLERANCE:
+        return None
 
     drop = prev_pct - new_used_percent
     if drop < REFRESH_DROP_THRESHOLD:
@@ -132,29 +163,51 @@ def _check_quota_refresh(history, provider, ra_str, new_used_percent, new_reset_
         "source": source,
     }
 
+def _merge_nearby_keys(provider_cycles, canonical_key, tolerance=RESET_AT_TOLERANCE):
+    """Merge entries from all keys within tolerance into canonical_key. Deletes absorbed keys."""
+    canonical_int = int(canonical_key)
+    to_merge = []
+    for k in list(provider_cycles.keys()):
+        if k == canonical_key:
+            continue
+        try:
+            if abs(int(k) - canonical_int) <= tolerance:
+                to_merge.append(k)
+        except (ValueError, TypeError):
+            continue
+    if not to_merge:
+        return
+    target = provider_cycles.setdefault(canonical_key, [])
+    for k in to_merge:
+        target.extend(provider_cycles.pop(k, []))
+
 def _record_snapshot(history, provider, weekly_used_percent, weekly_reset_at, source="live"):
     """Record today's weekly usage snapshot for paceHistory. Modifies history in-place."""
     if weekly_used_percent is None or not weekly_reset_at:
         return
-    ra_str = str(int(weekly_reset_at))
     today = _today_str()
     limit_ws = 604800  # 7 days
     cd = _cycle_day(weekly_reset_at, limit_ws)
 
     provider_cycles = history.setdefault(provider, {})
-    day_entries = provider_cycles.setdefault(ra_str, [])
+    canonical_key = _find_canonical_key(provider_cycles.keys(), weekly_reset_at)
+    _merge_nearby_keys(provider_cycles, canonical_key)
+    day_entries = provider_cycles.setdefault(canonical_key, [])
+
+    # Also merge events from nearby keys
+    prov_events = history.get("_events", {}).get(provider, {})
+    _merge_nearby_keys(prov_events, canonical_key)
 
     # Deduplicate legacy entries with same cycleDay
     _dedup_cycle_days(day_entries)
 
     # Check for quota refresh before updating
-    event = _check_quota_refresh(history, provider, ra_str,
+    event = _check_quota_refresh(history, provider, canonical_key,
                                  weekly_used_percent, weekly_reset_at, source)
     if event:
         events = history.setdefault("_events", {})
         prov_events = events.setdefault(provider, {})
-        cycle_events = prov_events.setdefault(ra_str, [])
-        # Avoid duplicate events for same cycleDay
+        cycle_events = prov_events.setdefault(canonical_key, [])
         if not any(e.get("cycleDay") == event["cycleDay"] for e in cycle_events):
             cycle_events.append(event)
 
@@ -178,41 +231,63 @@ def _record_snapshot(history, provider, weekly_used_percent, weekly_reset_at, so
     entry["capturedAt"] = int(time.time())
 
 def _get_pace_history(provider, weekly_reset_at, history=None):
-    """Get paceHistory array for current cycle."""
+    """Get paceHistory array for current cycle. Merges groups within tolerance."""
     if not weekly_reset_at:
         return []
-    ra_str = str(int(weekly_reset_at))
     if history is None:
         history = _load_history()
-    entries = history.get(provider, {}).get(ra_str, [])
+    provider_cycles = history.get(provider, {})
+    entries = _collect_entries_near_key(provider_cycles, str(int(weekly_reset_at)))
+    _dedup_cycle_days(entries)
     return sorted(entries, key=lambda e: e.get("cycleDay") or 0)
 
 def _get_events(provider, weekly_reset_at, history=None):
-    """Get events array for current cycle."""
+    """Get events array for current cycle. Merges groups within tolerance."""
     if not weekly_reset_at:
         return []
-    ra_str = str(int(weekly_reset_at))
     if history is None:
         history = _load_history()
-    return history.get("_events", {}).get(provider, {}).get(ra_str, [])
+    target_int = int(weekly_reset_at)
+    prov_events = history.get("_events", {}).get(provider, {})
+    merged = []
+    for k, events in prov_events.items():
+        try:
+            if abs(int(k) - target_int) <= RESET_AT_TOLERANCE:
+                merged.extend(events)
+        except (ValueError, TypeError):
+            continue
+    return merged
 
 def _prune_history(data, current_reset_ats):
     """Keep only cycles whose reset_at is in current_reset_ats or the most recent past cycle.
-    Also cleans _events for removed cycles."""
+    Uses tolerance for current-cycle matching. Also cleans _events for removed cycles."""
     for provider in ("claude", "codex"):
         cycles = data.get(provider, {})
         if not cycles:
             continue
         sorted_keys = sorted(cycles.keys(), reverse=True)
         keep = set()
+
+        # Build set of current canonical targets (normalized against existing keys)
+        current_targets = set()
         for ra in current_reset_ats.get(provider, []):
-            ra_str = str(ra)
-            if ra_str in cycles:
-                keep.add(ra_str)
+            canonical = _find_canonical_key(cycles.keys(), ra)
+            current_targets.add(canonical)
+
+        # Keep current cycle (all keys within tolerance of any current target)
+        for k in cycles.keys():
+            k_int = int(k)
+            for ct in current_targets:
+                if abs(k_int - int(ct)) <= RESET_AT_TOLERANCE:
+                    keep.add(k)
+                    break
+
+        # Keep most recent past cycle not already kept
         for k in sorted_keys:
             if k not in keep:
                 keep.add(k)
                 break
+
         for k in list(cycles.keys()):
             if k not in keep:
                 del cycles[k]
