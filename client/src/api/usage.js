@@ -25,6 +25,16 @@ export const mockUsage = {
           cumulativePacePercent: 85.7142,
           status: 'quiet',
         },
+        events: [
+          {
+            type: 'quota_refresh_in_cycle',
+            cycleDay: 6,
+            at: '2026-05-25T08:00:00.000Z',
+            fromUsedPercent: 92,
+            toUsedPercent: 4,
+            source: 'live',
+          },
+        ],
         paceHistory: [
           { cycleDay: 1, date: '2026-05-20', usedPercent: 18, cumulativePacePercent: 14.2857, status: 'over_pace' },
           { cycleDay: 2, date: '2026-05-21', usedPercent: 31, cumulativePacePercent: 28.5714, status: 'over_pace' },

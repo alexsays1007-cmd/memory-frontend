@@ -58,11 +58,20 @@ function statusLabel(status) {
   return 'unknown';
 }
 
+function refreshEventsFor(weekly) {
+  return (weekly?.events || []).filter(event => event?.type === 'quota_refresh_in_cycle');
+}
+
 function ProviderCard({ provider }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const session = provider.session || {};
   const weekly = provider.weekly || {};
   const pace = weekly.pace || {};
+  const refreshEvents = refreshEventsFor(weekly);
+  const refreshDays = useMemo(
+    () => new Set(refreshEvents.map(event => Number(event.cycleDay)).filter(Boolean)),
+    [refreshEvents]
+  );
   const historyByDay = useMemo(() => {
     const map = new Map();
     (weekly.paceHistory || []).forEach(item => map.set(Number(item.cycleDay), item));
@@ -105,7 +114,10 @@ function ProviderCard({ provider }) {
 
       <div className={`pace-panel pace-${pace.status || 'unknown'}`}>
         <div className="pace-copy">
-          <span>Pace</span>
+          <span>
+            Pace
+            {refreshEvents.length > 0 && <b className="pace-event-chip">refreshed</b>}
+          </span>
           <strong>
             {formatPercent(weeklyUsed, 1)} / {formatPercent(paceLimit, 1)}
           </strong>
@@ -117,14 +129,15 @@ function ProviderCard({ provider }) {
             const item = historyByDay.get(day);
             const state = item?.status || (day > currentDay ? 'future' : 'missing');
             const isToday = day === currentDay;
+            const hasRefresh = refreshDays.has(day);
             const label = item
-              ? `Day ${day}: ${formatPercent(item.usedPercent, 1)} / ${formatPercent(item.cumulativePacePercent, 1)} ${statusLabel(item.status)}`
+              ? `Day ${day}: ${formatPercent(item.usedPercent, 1)} / ${formatPercent(item.cumulativePacePercent, 1)} ${statusLabel(item.status)}${hasRefresh ? ' · refreshed' : ''}`
               : `Day ${day}`;
             return (
               <button
                 key={day}
                 type="button"
-                className={`pace-dot ${state} ${isToday ? 'today' : ''}`}
+                className={`pace-dot ${state} ${isToday ? 'today' : ''} ${hasRefresh ? 'refreshed' : ''}`}
                 title={label}
                 aria-label={label}
                 onClick={() => setSelectedDay(prev => prev === day ? null : day)}
@@ -135,6 +148,7 @@ function ProviderCard({ provider }) {
         {selectedHistory && (
           <div className="pace-detail">
             Day {selectedHistory.cycleDay}: {formatPercent(selectedHistory.usedPercent, 1)} / {formatPercent(selectedHistory.cumulativePacePercent, 1)} · {statusLabel(selectedHistory.status)}
+            {refreshDays.has(Number(selectedHistory.cycleDay)) ? ' · refreshed' : ''}
           </div>
         )}
       </div>

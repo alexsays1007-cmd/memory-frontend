@@ -301,10 +301,28 @@
 }
 
 .pace-copy span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--text-subtle);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.pace-event-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 8px;
+  border: 1px solid rgba(155, 120, 149, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(155, 120, 149, 0.10);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
 }
 
 .pace-copy strong {
@@ -367,6 +385,15 @@
   height: 16px;
   border: 2px solid var(--surface);
   outline: 1px solid var(--accent);
+}
+
+.pace-dot.refreshed {
+  outline: 1px dashed var(--riven);
+  outline-offset: 3px;
+}
+
+.pace-dot.today.refreshed {
+  outline-style: double;
 }
 
 .pace-detail {
