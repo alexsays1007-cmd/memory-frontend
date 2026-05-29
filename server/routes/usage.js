@@ -66,6 +66,7 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
       dailyPacePercent: DAILY_PACE,
       pace: { cycleDay: null, cumulativePacePercent: null, status: "unknown" },
       paceHistory: [],
+      events: [],
     };
   }
   const weeklyPercent = safeNum(w.used_percent);
@@ -73,8 +74,9 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
   const resetsInSeconds = resetsAt ? safeNum(w.reset_after_seconds) : null;
   const paceObj = makePace(weeklyPercent, w.reset_at, limitWindowSeconds);
 
-  // Load paceHistory from file
+  // Load paceHistory and events from file
   let paceHistory = [];
+  let events = [];
   try {
     const history = JSON.parse(readFileSync(HISTORY_PATH, "utf-8"));
     const raStr = String(w.reset_at);
@@ -89,6 +91,14 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
         source: e.source || "live",
       }))
       .sort((a, b) => (a.cycleDay || 0) - (b.cycleDay || 0));
+    const rawEvents = (history._events || {})[provider] || {};
+    events = (rawEvents[raStr] || []).map(e => ({
+      type: e.type,
+      cycleDay: e.cycleDay,
+      at: e.at ? new Date(e.at * 1000).toISOString() : null,
+      fromUsedPercent: e.fromUsedPercent,
+      toUsedPercent: e.toUsedPercent,
+    }));
   } catch {}
 
   return {
@@ -98,6 +108,7 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
     dailyPacePercent: DAILY_PACE,
     pace: paceObj,
     paceHistory,
+    events,
   };
 }
 

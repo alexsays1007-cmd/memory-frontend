@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 HOME = os.path.expanduser("~")
 HISTORY_PATH = os.path.join(HOME, "usage-reader", "usage-history.json")
 DAILY_PACE = round(100 / 7, 4)  # 14.2857
+REFRESH_DROP_THRESHOLD = 20  # percent
 
 # ── helpers ──────────────────────────────────────────────────
 
@@ -82,30 +83,6 @@ def _save_history(data):
     except Exception:
         pass
 
-def _prune_history(data, current_reset_ats):
-    """Keep only cycles whose reset_at is in current_reset_ats or the most recent past cycle."""
-    for provider in ("claude", "codex"):
-        cycles = data.get(provider, {})
-        if not cycles:
-            continue
-        # Sort keys (reset_at strings) descending
-        sorted_keys = sorted(cycles.keys(), reverse=True)
-        keep = set()
-        # Keep current cycle
-        for ra in current_reset_ats.get(provider, []):
-            ra_str = str(ra)
-            if ra_str in cycles:
-                keep.add(ra_str)
-        # Keep most recent past cycle not already kept
-        for k in sorted_keys:
-            if k not in keep:
-                keep.add(k)
-                break
-        # Remove others
-        for k in list(cycles.keys()):
-            if k not in keep:
-                del cycles[k]
-
 def _dedup_cycle_days(day_entries):
     """Remove duplicate entries with the same cycleDay, keeping the most recent."""
     seen = {}
@@ -118,8 +95,45 @@ def _dedup_cycle_days(day_entries):
             seen[cd] = e
     day_entries[:] = list(seen.values())
 
-def _record_snapshot(provider, weekly_used_percent, weekly_reset_at, source="live"):
-    """Record today's weekly usage snapshot for paceHistory."""
+def _check_quota_refresh(history, provider, ra_str, new_used_percent, new_reset_at, source):
+    """Compare with most recent previous snapshot; record event if big drop.
+
+    Only triggers for source="live" to avoid false positives from stale cache data.
+    Returns the event dict if a refresh was detected, else None.
+    """
+    if source != "live":
+        return None
+
+    entries = history.get(provider, {}).get(ra_str, [])
+    if not entries:
+        return None
+
+    # Find most recent snapshot by capturedAt
+    latest = max(entries, key=lambda e: e.get("capturedAt") or 0)
+    prev_pct = latest.get("usedPercent")
+    prev_ra = latest.get("weeklyResetAt")
+
+    if prev_pct is None or prev_ra is None:
+        return None
+    if int(prev_ra) != int(new_reset_at):
+        return None  # different cycle, not a refresh
+
+    drop = prev_pct - new_used_percent
+    if drop < REFRESH_DROP_THRESHOLD:
+        return None
+
+    cd = _cycle_day(new_reset_at, 604800)
+    return {
+        "type": "quota_refresh_in_cycle",
+        "cycleDay": cd,
+        "at": int(time.time()),
+        "fromUsedPercent": prev_pct,
+        "toUsedPercent": new_used_percent,
+        "source": source,
+    }
+
+def _record_snapshot(history, provider, weekly_used_percent, weekly_reset_at, source="live"):
+    """Record today's weekly usage snapshot for paceHistory. Modifies history in-place."""
     if weekly_used_percent is None or not weekly_reset_at:
         return
     ra_str = str(int(weekly_reset_at))
@@ -127,12 +141,22 @@ def _record_snapshot(provider, weekly_used_percent, weekly_reset_at, source="liv
     limit_ws = 604800  # 7 days
     cd = _cycle_day(weekly_reset_at, limit_ws)
 
-    history = _load_history()
     provider_cycles = history.setdefault(provider, {})
     day_entries = provider_cycles.setdefault(ra_str, [])
 
     # Deduplicate legacy entries with same cycleDay
     _dedup_cycle_days(day_entries)
+
+    # Check for quota refresh before updating
+    event = _check_quota_refresh(history, provider, ra_str,
+                                 weekly_used_percent, weekly_reset_at, source)
+    if event:
+        events = history.setdefault("_events", {})
+        prov_events = events.setdefault(provider, {})
+        cycle_events = prov_events.setdefault(ra_str, [])
+        # Avoid duplicate events for same cycleDay
+        if not any(e.get("cycleDay") == event["cycleDay"] for e in cycle_events):
+            cycle_events.append(event)
 
     # Find existing entry by cycleDay (not date)
     entry = None
@@ -153,17 +177,51 @@ def _record_snapshot(provider, weekly_used_percent, weekly_reset_at, source="liv
     entry["source"] = source
     entry["capturedAt"] = int(time.time())
 
-    _save_history(history)
-
-def _get_pace_history(provider, weekly_reset_at):
+def _get_pace_history(provider, weekly_reset_at, history=None):
     """Get paceHistory array for current cycle."""
     if not weekly_reset_at:
         return []
     ra_str = str(int(weekly_reset_at))
-    history = _load_history()
+    if history is None:
+        history = _load_history()
     entries = history.get(provider, {}).get(ra_str, [])
-    # Return sorted by cycleDay
     return sorted(entries, key=lambda e: e.get("cycleDay") or 0)
+
+def _get_events(provider, weekly_reset_at, history=None):
+    """Get events array for current cycle."""
+    if not weekly_reset_at:
+        return []
+    ra_str = str(int(weekly_reset_at))
+    if history is None:
+        history = _load_history()
+    return history.get("_events", {}).get(provider, {}).get(ra_str, [])
+
+def _prune_history(data, current_reset_ats):
+    """Keep only cycles whose reset_at is in current_reset_ats or the most recent past cycle.
+    Also cleans _events for removed cycles."""
+    for provider in ("claude", "codex"):
+        cycles = data.get(provider, {})
+        if not cycles:
+            continue
+        sorted_keys = sorted(cycles.keys(), reverse=True)
+        keep = set()
+        for ra in current_reset_ats.get(provider, []):
+            ra_str = str(ra)
+            if ra_str in cycles:
+                keep.add(ra_str)
+        for k in sorted_keys:
+            if k not in keep:
+                keep.add(k)
+                break
+        for k in list(cycles.keys()):
+            if k not in keep:
+                del cycles[k]
+
+        # Prune _events for this provider
+        events = data.get("_events", {}).get(provider, {})
+        for k in list(events.keys()):
+            if k not in keep:
+                del events[k]
 
 # ── Codex ────────────────────────────────────────────────────
 
@@ -213,7 +271,6 @@ class CodexUsageReader:
 
         plan = raw.get("plan_type") or raw.get("plan") or ""
 
-        # API nests under rate_limit with _window suffix
         rl = raw.get("rate_limit") or {}
         primary = _win(rl.get("primary_window") or raw.get("primary"))
         secondary = _win(rl.get("secondary_window") or raw.get("secondary"))
@@ -333,12 +390,14 @@ def get_all():
     claude = ClaudeRateLimitReader().get()
     codex = CodexUsageReader().get()
 
+    history = _load_history()
+
     # Record daily snapshots for paceHistory
     if claude.get("available") and claude.get("seven_day"):
-        _record_snapshot("claude", claude["seven_day"].get("used_percent"),
+        _record_snapshot(history, "claude", claude["seven_day"].get("used_percent"),
                          claude["seven_day"].get("reset_at"), source=claude.get("source", "live"))
     if codex.get("available") and codex.get("secondary"):
-        _record_snapshot("codex", codex["secondary"].get("used_percent"),
+        _record_snapshot(history, "codex", codex["secondary"].get("used_percent"),
                          codex["secondary"].get("reset_at"), source=codex.get("source", "live"))
 
     # Prune old cycles
@@ -347,7 +406,10 @@ def get_all():
         current_ras["claude"] = [claude["seven_day"]["reset_at"]]
     if codex.get("available") and codex.get("secondary", {}).get("reset_at"):
         current_ras["codex"] = [codex["secondary"]["reset_at"]]
-    _prune_history(_load_history(), current_ras)
+    _prune_history(history, current_ras)
+
+    # Save once
+    _save_history(history)
 
     return {"codex": codex, "claude": claude}
 
