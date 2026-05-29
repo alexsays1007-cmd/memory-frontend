@@ -8,6 +8,32 @@ const PYTHON = "/usr/bin/python3";
 const SCRIPT = "/home/claude/sqlite-viewer-release-v1/server/scripts/usage_reader.py";
 const HISTORY_PATH = "/home/claude/usage-reader/usage-history.json";
 const DAILY_PACE = +(100 / 7).toFixed(4); // 14.2857
+const RESET_AT_TOLERANCE = 5; // seconds — matches usage_reader.py
+
+function collectNearTolerance(grouped, targetKey, tolerance = RESET_AT_TOLERANCE) {
+  const target = Number(targetKey);
+  if (!Number.isFinite(target)) return [];
+  const merged = [];
+  for (const [k, entries] of Object.entries(grouped || {})) {
+    if (Math.abs(Number(k) - target) <= tolerance) {
+      merged.push(...(Array.isArray(entries) ? entries : []));
+    }
+  }
+  return merged;
+}
+
+function dedupByCycleDay(entries) {
+  const seen = new Map();
+  for (const e of entries) {
+    const cd = e.cycleDay;
+    if (cd == null) continue;
+    const prev = seen.get(cd);
+    if (!prev || (e.capturedAt || 0) > (prev.capturedAt || 0)) {
+      seen.set(cd, e);
+    }
+  }
+  return [...seen.values()];
+}
 
 function ts(resetAt) {
   if (!resetAt) return null;
@@ -74,14 +100,14 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
   const resetsInSeconds = resetsAt ? safeNum(w.reset_after_seconds) : null;
   const paceObj = makePace(weeklyPercent, w.reset_at, limitWindowSeconds);
 
-  // Load paceHistory and events from file
+  // Load paceHistory and events from file (tolerance-based lookup)
   let paceHistory = [];
   let events = [];
   try {
     const history = JSON.parse(readFileSync(HISTORY_PATH, "utf-8"));
-    const raStr = String(w.reset_at);
-    const entries = (history[provider] || {})[raStr] || [];
-    paceHistory = entries
+    const rawEntries = collectNearTolerance(history[provider], w.reset_at);
+    const deduped = dedupByCycleDay(rawEntries);
+    paceHistory = deduped
       .map(e => ({
         cycleDay: e.cycleDay,
         date: e.date,
@@ -91,8 +117,8 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
         source: e.source || "live",
       }))
       .sort((a, b) => (a.cycleDay || 0) - (b.cycleDay || 0));
-    const rawEvents = (history._events || {})[provider] || {};
-    events = (rawEvents[raStr] || []).map(e => ({
+    const rawEvents = collectNearTolerance((history._events || {})[provider], w.reset_at);
+    events = dedupByCycleDay(rawEvents).map(e => ({
       type: e.type,
       cycleDay: e.cycleDay,
       at: e.at ? new Date(e.at * 1000).toISOString() : null,
