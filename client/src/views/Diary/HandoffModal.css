@@ -1,5 +1,5 @@
 /* ================================================
-   Handoff Modal – Desktop Card / Mobile Bottom Sheet
+   Handoff Modal - Desktop Card / Mobile Bottom Sheet
    ================================================ */
 
 .handoff-overlay {
@@ -19,10 +19,9 @@
   to { opacity: 1; }
 }
 
-/* Desktop: centered card */
 .handoff-card {
   width: 90%;
-  max-width: 560px;
+  max-width: 720px;
   max-height: 78vh;
   background-color: var(--bg);
   border: 1px solid var(--border);
@@ -39,7 +38,6 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Mobile: bottom sheet */
 @media (max-width: 600px) {
   .handoff-overlay {
     align-items: flex-end;
@@ -70,7 +68,6 @@
   margin: 8px auto 4px;
 }
 
-/* Header */
 .handoff-header {
   display: flex;
   justify-content: space-between;
@@ -133,12 +130,48 @@
   height: 15px;
 }
 
-.handoff-action-btn:hover {
+.handoff-action-btn:hover,
+.handoff-action-btn.is-active {
   background-color: var(--surface-soft);
   color: var(--text-main);
 }
 
-/* Body */
+.handoff-action-btn.is-active {
+  color: var(--accent);
+}
+
+.handoff-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+  flex-shrink: 0;
+}
+
+.handoff-tab {
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 12px;
+  padding: 7px 14px;
+  transition: all var(--transition-fast);
+}
+
+.handoff-tab:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.handoff-tab.is-active {
+  background-color: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--accent-text, var(--accent));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
 .handoff-body {
   flex: 1;
   overflow-y: auto;
@@ -154,9 +187,6 @@
   padding: 40px 0;
 }
 
-/* ================================================
-   Markdown Styling – "Letter paper" feel
-   ================================================ */
 .handoff-markdown {
   font-family: var(--font-title);
   font-size: 14px;
@@ -270,7 +300,84 @@
   font-weight: var(--font-medium);
 }
 
-/* Mobile body adjustments */
+.handoff-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: min(52vh, 520px);
+  gap: 12px;
+}
+
+.handoff-textarea {
+  width: 100%;
+  min-height: min(48vh, 480px);
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  color: var(--text-main);
+  font-family: var(--font-title);
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 14px 16px;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.handoff-textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.handoff-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.handoff-status,
+.handoff-inline-status {
+  color: var(--text-muted);
+  font-family: var(--font-title);
+  font-size: 12px;
+}
+
+.handoff-status {
+  margin-right: auto;
+}
+
+.handoff-inline-status {
+  margin-bottom: 10px;
+}
+
+.handoff-editor-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 12px;
+  padding: 7px 14px;
+  transition: all var(--transition-fast);
+}
+
+.handoff-editor-btn:hover:not(:disabled) {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.handoff-editor-btn.primary {
+  background-color: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--accent-text, var(--accent));
+}
+
+.handoff-editor-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 @media (max-width: 600px) {
   .handoff-body {
     padding: 14px 16px 20px;
@@ -286,5 +393,30 @@
 
   .handoff-markdown h2 {
     font-size: 15px;
+  }
+
+  .handoff-tabs {
+    padding: 8px 14px 0;
+  }
+
+  .handoff-tab {
+    flex: 1;
+    padding: 8px 10px;
+  }
+
+  .handoff-editor {
+    min-height: 58vh;
+  }
+
+  .handoff-textarea {
+    min-height: 52vh;
+    font-size: 13px;
+  }
+
+  .handoff-editor-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
+    padding-top: 8px;
   }
 }

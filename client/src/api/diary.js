@@ -41,3 +41,22 @@ export function restoreDiaryEntry(id) {
 export function getHandoff() {
   return fetchApi('/handoff');
 }
+
+export async function getHandoffCurrent() {
+  try {
+    return await fetchApi('/handoff/current');
+  } catch {
+    return getHandoff();
+  }
+}
+
+export function getHandoffPrevious() {
+  return fetchApi('/handoff/previous');
+}
+
+export function updateHandoffCurrent(content) {
+  return requestApi('/handoff/current', {
+    method: 'PUT',
+    body: { content },
+  });
+}

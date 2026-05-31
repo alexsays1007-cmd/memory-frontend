@@ -16,7 +16,6 @@ export default function DiaryPage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
 
-  // Load dates
   useEffect(() => {
     getDiaryDates()
       .then(res => {
@@ -33,7 +32,6 @@ export default function DiaryPage() {
       });
   }, []);
 
-  // Load entries for current date
   useEffect(() => {
     if (!currentDate) return;
 
@@ -79,10 +77,9 @@ export default function DiaryPage() {
     }
   };
 
-  // Group dates by month for the jump list
   const monthGroups = {};
   dates.forEach(d => {
-    const key = d.substring(0, 7); // "2026-05"
+    const key = d.substring(0, 7);
     if (!monthGroups[key]) monthGroups[key] = [];
     monthGroups[key].push(d);
   });
@@ -91,7 +88,7 @@ export default function DiaryPage() {
     <div className="page-header">
       <div className="page-title-wrap">
         <svg className="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
         </svg>
         <div>
           <h1 className="page-title">日记胶囊</h1>
@@ -104,11 +101,11 @@ export default function DiaryPage() {
         aria-label="Open handoff note"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
         </svg>
         <span className="handoff-btn-label">今日便签</span>
       </button>

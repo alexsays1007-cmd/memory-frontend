@@ -10,6 +10,7 @@ import consciousnessRouter from './routes/consciousness.js';
 import rawMessagesRouter from './routes/rawMessages.js';
 import usageRouter from './routes/usage.js';
 import forgeRouter from './routes/forge.js';
+import handoffRouter from './routes/handoff.js';
 import { closeDb, getDbInfo } from './db/index.js';
 
 const app = express();
@@ -80,6 +81,7 @@ app.get('/api/handoff', (req, res) => {
 });
 
 // Routes
+app.use('/api/handoff', handoffRouter);
 app.use('/api/memories', memoriesRouter);
 app.use('/api/diary', diaryRouter);
 app.use('/api/consciousness', consciousnessRouter);
