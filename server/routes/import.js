@@ -126,6 +126,9 @@ function parseConversation(conv, sessionOverride, titleOverride) {
     if (['user_editable_context', 'model_editable_context', 'code',
          'tether_browsing_display', 'tether_quote', 'execution_output',
          'system_error'].includes(contentType)) continue;
+    // Skip ChatGPT internal channels (commentary = code execution, multimodal_text = tool output)
+    const msgChannel = msg.channel || '';
+    if (['commentary', 'multimodal_text'].includes(msgChannel)) continue;
 
     const text = extractText(msg);
     if (!text) continue;
