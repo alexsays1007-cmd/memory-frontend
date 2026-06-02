@@ -269,6 +269,9 @@ export default function ImportModal({ onClose, onImported }) {
               <p className="done-summary">
                 <strong>{importResult.title}</strong><br />
                 {importResult.imported} 条消息 · User {importResult.userCount} · Assistant {importResult.assistantCount}
+                {importResult.duplicatesHidden > 0 && (
+                  <><br />{importResult.duplicatesHidden} 条重复已自动隐藏</>
+                )}
               </p>
               <div className="import-actions">
                 <button className="import-text-btn" onClick={handleReset}>继续导入</button>

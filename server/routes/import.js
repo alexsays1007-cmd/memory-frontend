@@ -144,6 +144,7 @@ function parseConversation(conv, sessionOverride, titleOverride) {
       created,
       agent: modelSlug,
       channel: 'chatgpt',
+      message_id: msg.id || null,
       direction: role === 'user' ? 'inbound' : 'outbound',
       content_type: 'text',
       kind: 'chat',
@@ -271,20 +272,36 @@ router.post('/execute', requireMemoryWriteAccess, (req, res) => {
         db.prepare('DELETE FROM raw_message_sessions WHERE session = ?').run(session);
       }
 
-      // Batch insert
+      // Collect existing message_ids from other chatgpt sessions for cross-session dedup
+      const existingMsgIds = new Set();
+      const rows = db.prepare(
+        "SELECT message_id FROM raw_messages WHERE channel = 'chatgpt' AND message_id IS NOT NULL AND session != ?"
+      ).all(session);
+      for (const row of rows) {
+        existingMsgIds.add(row.message_id);
+      }
+
+      // Batch insert with dedup
       const insert = db.prepare(`
         INSERT INTO raw_messages (
-          session, line_num, role, content, created, agent, channel,
+          session, line_num, role, content, created, agent, channel, message_id,
           direction, content_type, kind, visibility, source, raw_json,
           favorite, hidden
         ) VALUES (
-          @session, @line_num, @role, @content, @created, @agent, @channel,
+          @session, @line_num, @role, @content, @created, @agent, @channel, @message_id,
           @direction, @content_type, @kind, @visibility, @source, @raw_json,
           @favorite, @hidden
         )
       `);
 
+      let dupCount = 0;
       for (const record of records) {
+        // If this message_id exists in another session, mark hidden
+        if (record.message_id && existingMsgIds.has(record.message_id)) {
+          record.hidden = 1;
+          record.visibility = 'hidden';
+          dupCount++;
+        }
         insert.run(record);
       }
 
@@ -309,9 +326,11 @@ router.post('/execute', requireMemoryWriteAccess, (req, res) => {
         latest,
         `Imported from ChatGPT export. Models: ${models.join(', ')}`
       );
+
+      return dupCount;
     });
 
-    importTx();
+    const dupCount = importTx();
 
     const userCount = records.filter(r => r.role === 'user').length;
     const assistantCount = records.filter(r => r.role === 'assistant').length;
@@ -323,6 +342,7 @@ router.post('/execute', requireMemoryWriteAccess, (req, res) => {
       imported: records.length,
       userCount,
       assistantCount,
+      duplicatesHidden: dupCount,
       earliest: records[0].created,
       latest: records[records.length - 1].created,
     });
