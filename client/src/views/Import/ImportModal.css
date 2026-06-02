@@ -19,7 +19,7 @@
 }
 
 .import-modal {
-  background: var(--bg-page, var(--bg-card));
+  background: var(--surface-elevated, var(--surface));
   border-radius: var(--radius-xl, 16px);
   width: 100%;
   max-width: 520px;
@@ -98,9 +98,9 @@
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-8) var(--space-4);
-  border: 2px dashed var(--border);
+  border: 2px dashed var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--bg-card);
+  background: var(--surface-soft);
   cursor: pointer;
   transition: border-color 0.2s;
 }
@@ -146,7 +146,7 @@
 .import-step-count {
   padding: 1px 8px;
   border-radius: var(--radius-sm);
-  background: var(--bg-elevated, var(--bg-card));
+  background: var(--surface-elevated, var(--surface));
 }
 
 .import-conv-list {
@@ -164,7 +164,7 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--bg-card);
+  background: var(--surface);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.15s;
@@ -190,7 +190,7 @@
 .conv-item-model {
   padding: 0 5px;
   border-radius: 3px;
-  background: var(--bg-elevated, var(--bg-card));
+  background: var(--surface-elevated, var(--surface));
   font-family: var(--font-mono, monospace);
   font-size: 10px;
 }
@@ -220,7 +220,7 @@
 .preview-info-item {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--bg-card);
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 
@@ -288,8 +288,8 @@
   line-height: 1.5;
 }
 
-.preview-msg-user { background: var(--bg-card); }
-.preview-msg-assistant { background: var(--bg-elevated, var(--bg-card)); }
+.preview-msg-user { background: var(--surface); }
+.preview-msg-assistant { background: var(--surface-elevated, var(--surface)); }
 
 .preview-role {
   flex-shrink: 0;
@@ -331,7 +331,7 @@
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--bg-card);
+  background: var(--surface);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   cursor: pointer;
