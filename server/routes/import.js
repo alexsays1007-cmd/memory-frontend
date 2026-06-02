@@ -33,41 +33,52 @@ function ensureRawMessagesTable(db) {
 
 /**
  * Walk ChatGPT mapping tree in conversation order.
- * The mapping is a dict of {id: {id, message, parent, children}}.
- * We traverse from root following children to build linear message list.
+ * Traces from current_node back to root to get the active branch,
+ * then returns messages in chronological order (root → current).
+ * This correctly handles forked conversations.
  */
-function walkMapping(mapping) {
-  // Find root: node with no parent or parent not in mapping
-  let rootId = null;
-  for (const [id, node] of Object.entries(mapping)) {
-    if (!node.parent || !mapping[node.parent]) {
-      rootId = id;
-      break;
+function walkMapping(mapping, currentNode) {
+  // Strategy: trace from current_node up to root via parent links
+  let startId = currentNode;
+
+  // If no current_node provided, find the deepest leaf by following last children
+  if (!startId || !mapping[startId]) {
+    let rootId = null;
+    for (const [id, node] of Object.entries(mapping)) {
+      if (!node.parent || !mapping[node.parent]) {
+        rootId = id;
+        break;
+      }
+    }
+    if (!rootId) return [];
+
+    // Walk down taking last child to find a leaf
+    startId = rootId;
+    while (true) {
+      const node = mapping[startId];
+      const children = node?.children || [];
+      if (children.length === 0) break;
+      startId = children[children.length - 1];
     }
   }
-  if (!rootId) return [];
 
-  const messages = [];
-  const queue = [rootId];
+  // Trace from startId back to root
+  const path = [];
+  const visited = new Set();
+  let nodeId = startId;
 
-  while (queue.length > 0) {
-    const nodeId = queue.shift();
+  while (nodeId && mapping[nodeId] && !visited.has(nodeId)) {
+    visited.add(nodeId);
     const node = mapping[nodeId];
-    if (!node) continue;
-
     if (node.message) {
-      messages.push(node.message);
+      path.push(node.message);
     }
-
-    // Follow children (take last child for main branch if multiple)
-    const children = node.children || [];
-    if (children.length > 0) {
-      // Push last child (main conversation branch)
-      queue.push(children[children.length - 1]);
-    }
+    nodeId = node.parent;
   }
 
-  return messages;
+  // Reverse: root first, current_node last
+  path.reverse();
+  return path;
 }
 
 /**
@@ -94,7 +105,8 @@ function unixToIso(ts) {
  */
 function parseConversation(conv, sessionOverride, titleOverride) {
   const mapping = conv.mapping || {};
-  const messages = walkMapping(mapping);
+  const currentNode = conv.current_node || '';
+  const messages = walkMapping(mapping, currentNode);
   const convTitle = titleOverride || conv.title || 'Untitled';
   const convId = conv.conversation_id || '';
   const session = sessionOverride || `chatgpt-${convId}`;
@@ -107,14 +119,16 @@ function parseConversation(conv, sessionOverride, titleOverride) {
     const role = msg.author?.role;
     if (!role || role === 'system' || role === 'tool') continue;
 
+    // Skip hidden system context and non-chat content types
+    const meta = msg.metadata || {};
+    const contentType = msg.content?.content_type || '';
+    if (meta.is_visually_hidden_from_conversation) continue;
+    if (['user_editable_context', 'model_editable_context', 'code',
+         'tether_browsing_display', 'tether_quote', 'execution_output',
+         'system_error'].includes(contentType)) continue;
+
     const text = extractText(msg);
     if (!text) continue;
-
-    // Skip hidden system context messages
-    const meta = msg.metadata || {};
-    if (meta.is_visually_hidden_from_conversation) continue;
-    if (msg.content?.content_type === 'user_editable_context') continue;
-    if (msg.content?.content_type === 'model_editable_context') continue;
 
     const created = unixToIso(msg.create_time);
     if (!created) continue;
