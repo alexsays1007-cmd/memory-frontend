@@ -7,6 +7,7 @@ import StreamCalendar from './StreamCalendar';
 import SessionPanel from './SessionPanel';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ImportModal from '../Import/ImportModal';
 import './RawMessagesPage.css';
 
 const PAGE_SIZE = 50;
@@ -85,6 +86,7 @@ export default function RawMessagesPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [savedSearch, setSavedSearch] = useState(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const locateMessageIdRef = useRef(null);
   const restoreScrollRef = useRef(null);
   const [locateEndUtc, setLocateEndUtc] = useState(null); // endUtc for locate initial load
@@ -585,6 +587,18 @@ export default function RawMessagesPage() {
           </div>
 
           <div className="stream-controls">
+            <button
+              className="stream-chip icon-chip import-chip"
+              onClick={() => setShowImport(true)}
+              title="导入对话"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </button>
+
             <div className="stream-date-wrapper">
               <button
                 className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
@@ -877,6 +891,16 @@ export default function RawMessagesPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={() => {
+            setShowImport(false);
+            fetchMessages(1);
+          }}
+        />
       )}
     </div>
   );
