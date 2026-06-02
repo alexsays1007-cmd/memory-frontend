@@ -11,6 +11,7 @@ import rawMessagesRouter from './routes/rawMessages.js';
 import usageRouter from './routes/usage.js';
 import forgeRouter from './routes/forge.js';
 import handoffRouter from './routes/handoff.js';
+import importRouter from './routes/import.js';
 import { closeDb, getDbInfo } from './db/index.js';
 
 const app = express();
@@ -32,7 +33,7 @@ const clientDistPath = process.env.CLIENT_DIST
 const hasClientDist = fs.existsSync(path.join(clientDistPath, 'index.html'));
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -86,6 +87,7 @@ app.use('/api/memories', memoriesRouter);
 app.use('/api/diary', diaryRouter);
 app.use('/api/consciousness', consciousnessRouter);
 app.use('/api/raw-messages', rawMessagesRouter);
+app.use('/api/import', importRouter);
 app.use('/api/usage', usageRouter);
 app.use('/api/forge', forgeRouter);
 
