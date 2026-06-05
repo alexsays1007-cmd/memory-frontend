@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo, createRef } from 'react';
-import { getRawMessages, getRawMessageChannels, getRawMessageDates, hideMessage } from '../../api/rawMessages';
+import {
+  getRawMessages,
+  getRawMessageChannels,
+  getRawMessageDates,
+  getRawMessageSummaries,
+  updateRawMessageSummary,
+  hideMessage,
+} from '../../api/rawMessages';
 import { getMessageCreated, getMessageText, isSystemOrHidden } from '../../utils/message';
 import { parseToLocalDate } from '../../utils/date';
 import MessageBubble from './MessageBubble';
@@ -14,7 +21,8 @@ const PAGE_SIZE = 50;
 const SOURCE_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'wechat', label: 'WeChat' },
-  { value: 'telegram', label: 'Telegram' },
+  { value: 'telegram-dm', label: 'TG DM' },
+  { value: 'telegram-group', label: 'Group' },
   { value: 'chatgpt', label: 'ChatGPT' },
 ];
 
@@ -63,6 +71,8 @@ export default function RawMessagesPage() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [channel, setChannel] = useState('');
+  const [threadId, setThreadId] = useState('');
+  const [excludeThreadId, setExcludeThreadId] = useState('');
   const [searchQ, setSearchQ] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -91,6 +101,13 @@ export default function RawMessagesPage() {
   const restoreScrollRef = useRef(null);
   const [locateEndUtc, setLocateEndUtc] = useState(null); // endUtc for locate initial load
   const [loadingNewer, setLoadingNewer] = useState(false);
+  const [showSummaries, setShowSummaries] = useState(false);
+  const [summaries, setSummaries] = useState([]);
+  const [summariesLoading, setSummariesLoading] = useState(false);
+  const [summaryKind, setSummaryKind] = useState('rolling');
+  const [editingSummaryId, setEditingSummaryId] = useState(null);
+  const [summaryDraft, setSummaryDraft] = useState('');
+  const [savingSummary, setSavingSummary] = useState(false);
 
   const searchTimer = useRef(null);
   const matchRefs = useRef([]);
@@ -122,10 +139,15 @@ export default function RawMessagesPage() {
 
   useEffect(() => {
     const tz = getBrowserTimezone();
-    getRawMessageDates({ channel: channel || undefined, tz })
+    getRawMessageDates({
+      channel: channel || undefined,
+      threadId: threadId || undefined,
+      excludeThreadId: excludeThreadId || undefined,
+      tz,
+    })
       .then(res => setDateSummary(res.dates || []))
       .catch(console.error);
-  }, [channel]);
+  }, [channel, threadId, excludeThreadId]);
 
   // When a date filter is active, sort ascending so messages start from morning
   const hasDateFilter = (dateMode === 'single' && selectedDate)
@@ -139,6 +161,8 @@ export default function RawMessagesPage() {
       sort: sortOrder,
     };
     if (channel) params.channel = channel;
+    if (threadId) params.threadId = threadId;
+    if (excludeThreadId) params.excludeThreadId = excludeThreadId;
     if (selectedSession) params.session = selectedSession;
     if (searchQ) params.q = searchQ;
     if (dateMode === 'single' && selectedDate) {
@@ -157,7 +181,55 @@ export default function RawMessagesPage() {
       params.endUtc = locateEndUtc;
     }
     return params;
-  }, [channel, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden, locateEndUtc, sortOrder]);
+  }, [channel, threadId, excludeThreadId, selectedSession, searchQ, selectedDate, rangeStart, rangeEnd, dateMode, favOnly, showHidden, locateEndUtc, sortOrder]);
+
+  const sourceFilter = useMemo(() => {
+    if (channel === 'telegram' && threadId === 'ember_group') return 'telegram-group';
+    if (channel === 'telegram' && excludeThreadId === 'ember_group') return 'telegram-dm';
+    return channel || '';
+  }, [channel, threadId, excludeThreadId]);
+
+  const handleSourceSelect = (value) => {
+    setSelectedSession('');
+    setSessionTitle('');
+    if (value === 'telegram-group') {
+      setChannel('telegram');
+      setThreadId('ember_group');
+      setExcludeThreadId('');
+      return;
+    }
+    if (value === 'telegram-dm') {
+      setChannel('telegram');
+      setThreadId('');
+      setExcludeThreadId('ember_group');
+      return;
+    }
+    setChannel(value);
+    setThreadId('');
+    setExcludeThreadId('');
+  };
+
+  const fetchSummaries = useCallback(async () => {
+    if (!showSummaries) return;
+    setSummariesLoading(true);
+    try {
+      const result = await getRawMessageSummaries({
+        channel: channel || undefined,
+        threadId: threadId || undefined,
+        kind: summaryKind || undefined,
+      });
+      setSummaries(result.summaries || []);
+    } catch (err) {
+      console.error('Failed to fetch summaries:', err);
+      setSummaries([]);
+    } finally {
+      setSummariesLoading(false);
+    }
+  }, [showSummaries, channel, threadId, summaryKind]);
+
+  useEffect(() => {
+    fetchSummaries();
+  }, [fetchSummaries]);
 
   const fetchMessages = useCallback(async (pageNum = 1, append = false) => {
     if (append) setLoadingMore(true);
@@ -272,6 +344,8 @@ export default function RawMessagesPage() {
       };
       if (selectedSession) params.session = selectedSession;
       if (channel) params.channel = channel;
+      if (threadId) params.threadId = threadId;
+      if (excludeThreadId) params.excludeThreadId = excludeThreadId;
       const result = await getRawMessages(params);
       const data = (result.data || []).slice().reverse();
       if (data.length > 0) {
@@ -285,7 +359,7 @@ export default function RawMessagesPage() {
     } finally {
       setLoadingNewer(false);
     }
-  }, [locateEndUtc, loadingNewer, selectedSession, channel]);
+  }, [locateEndUtc, loadingNewer, selectedSession, channel, threadId, excludeThreadId]);
 
   const handleSessionSelect = (sessionId) => {
     setSelectedSession(sessionId || '');
@@ -329,6 +403,8 @@ export default function RawMessagesPage() {
       searchQ,
       searchInput,
       channel,
+      threadId,
+      excludeThreadId,
       selectedSession,
       sessionTitle,
       scrollY: window.scrollY,
@@ -351,7 +427,7 @@ export default function RawMessagesPage() {
       setSessionTitle('');
       window.scrollTo({ top: 0 });
     }, 250);
-  }, [searchQ, searchInput, channel, selectedSession, sessionTitle]);
+  }, [searchQ, searchInput, channel, threadId, excludeThreadId, selectedSession, sessionTitle]);
 
   const handleBackToSearch = useCallback(() => {
     if (!savedSearch) return;
@@ -362,6 +438,8 @@ export default function RawMessagesPage() {
       setSearchInput(savedSearch.searchInput);
       setSearchQ(savedSearch.searchQ);
       setChannel(savedSearch.channel);
+      setThreadId(savedSearch.threadId || '');
+      setExcludeThreadId(savedSearch.excludeThreadId || '');
       setSelectedSession(savedSearch.selectedSession);
       setSessionTitle(savedSearch.sessionTitle);
       locateMessageIdRef.current = null;
@@ -418,6 +496,42 @@ export default function RawMessagesPage() {
       return prev.map(m => m.id === updated.id ? { ...m, ...updated } : m);
     });
   };
+
+  const startEditSummary = (summary) => {
+    setEditingSummaryId(summary.id);
+    setSummaryDraft(summary.revised_summary ?? summary.original_summary ?? '');
+  };
+
+  const cancelEditSummary = () => {
+    setEditingSummaryId(null);
+    setSummaryDraft('');
+  };
+
+  const saveSummary = async (summary) => {
+    if (savingSummary) return;
+    setSavingSummary(true);
+    try {
+      const result = await updateRawMessageSummary(summary.id, summaryDraft);
+      setSummaries(prev => prev.map(item => item.id === summary.id ? result.summary : item));
+      cancelEditSummary();
+    } catch (err) {
+      console.error('Failed to save summary:', err);
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
+  const formatSummaryRange = (summary) => {
+    const first = summary.start_created?.slice(0, 10) || '';
+    const last = summary.end_created?.slice(0, 10) || '';
+    if (!first) return '';
+    if (first === last) return first;
+    return `${first} ~ ${last}`;
+  };
+
+  const displaySummaryText = (text = '') => (
+    text.replace(/\n?【摘要完】\s*$/u, '').trim()
+  );
 
   const visibleMessages = showHidden
     ? messages
@@ -633,6 +747,14 @@ export default function RawMessagesPage() {
             </button>
 
             <button
+              className={`stream-chip summary-chip ${showSummaries ? 'active' : ''}`}
+              onClick={() => setShowSummaries(!showSummaries)}
+              title="Summary"
+            >
+              Summary
+            </button>
+
+            <button
               className={`stream-chip icon-chip hidden-chip ${showHidden ? 'active' : ''}`}
               onClick={() => setShowHidden(!showHidden)}
               title="已隐藏"
@@ -663,19 +785,19 @@ export default function RawMessagesPage() {
             {SOURCE_OPTIONS.map(option => (
               <button
                 key={option.value || 'all'}
-                className={`stream-chip ${channel === option.value ? 'active' : ''}`}
-                onClick={() => setChannel(option.value)}
+                className={`stream-chip ${sourceFilter === option.value ? 'active' : ''}`}
+                onClick={() => handleSourceSelect(option.value)}
               >
                 {option.label}
               </button>
             ))}
             {channels
-              .filter(ch => !SOURCE_OPTIONS.some(option => option.value === ch))
+              .filter(ch => ch !== 'telegram' && !SOURCE_OPTIONS.some(option => option.value === ch))
               .map(ch => (
                 <button
                   key={ch}
-                  className={`stream-chip ${channel === ch ? 'active' : ''}`}
-                  onClick={() => setChannel(ch)}
+                  className={`stream-chip ${sourceFilter === ch ? 'active' : ''}`}
+                  onClick={() => handleSourceSelect(ch)}
                 >
                   {ch}
                 </button>
@@ -719,6 +841,8 @@ export default function RawMessagesPage() {
               }}
               currentSession={selectedSession}
               currentChannel={channel}
+              currentThreadId={threadId}
+              currentExcludeThreadId={excludeThreadId}
             />
           </div>
         </div>
@@ -797,6 +921,90 @@ export default function RawMessagesPage() {
           />
         )}
       </div>
+
+      {showSummaries && (
+        <section className="summary-panel">
+          <div className="summary-panel-header">
+            <div>
+              <div className="summary-panel-title">Summary</div>
+              <div className="summary-panel-subtitle">
+                {sourceFilter === 'telegram-group' ? 'Group memory' : 'Filtered summaries'}
+              </div>
+            </div>
+            <div className="summary-kind-tabs">
+              <button
+                className={summaryKind === 'rolling' ? 'active' : ''}
+                onClick={() => setSummaryKind('rolling')}
+              >
+                Rolling
+              </button>
+              <button
+                className={summaryKind === 'chunk' ? 'active' : ''}
+                onClick={() => setSummaryKind('chunk')}
+              >
+                Chunk
+              </button>
+            </div>
+          </div>
+
+          {summariesLoading ? (
+            <div className="summary-panel-empty">Loading summaries...</div>
+          ) : summaries.length === 0 ? (
+            <div className="summary-panel-empty">
+              No summaries yet for this filter.
+            </div>
+          ) : (
+            <div className="summary-list">
+              {summaries.map(summary => {
+                const visibleSummary = displaySummaryText(summary.revised_summary || summary.original_summary);
+                const isEditing = editingSummaryId === summary.id;
+                return (
+                  <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''}`}>
+                    <div className="summary-item-meta">
+                      <span>{summary.summary_kind}</span>
+                      {summary.is_current ? <span>current</span> : null}
+                      <span>{summary.message_count} msgs</span>
+                      <span>{formatSummaryRange(summary)}</span>
+                    </div>
+
+                    {isEditing ? (
+                      <>
+                        <textarea
+                          className="summary-editor"
+                          value={summaryDraft}
+                          onChange={e => setSummaryDraft(e.target.value)}
+                          rows={12}
+                        />
+                        <div className="summary-actions">
+                          <button onClick={cancelEditSummary}>Cancel</button>
+                          <button className="primary" onClick={() => saveSummary(summary)} disabled={savingSummary}>
+                            {savingSummary ? 'Saving...' : 'Save revision'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <pre className="summary-text">{visibleSummary}</pre>
+                        {summary.revised_summary ? (
+                          <details className="summary-original">
+                            <summary>DS original</summary>
+                            <pre>{displaySummaryText(summary.original_summary)}</pre>
+                          </details>
+                        ) : null}
+                        <div className="summary-actions">
+                          <button onClick={() => startEditSummary(summary)}>
+                            {summary.revised_summary ? 'Edit revision' : 'Revise'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className={`stream-messages ${transitioning ? 'stream-fade-out' : 'stream-fade-in'}`}>
         {loading ? (

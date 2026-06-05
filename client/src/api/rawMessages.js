@@ -18,6 +18,19 @@ export function getRawMessages(params = {}) {
   return fetchApi('/raw-messages', params);
 }
 
+/** Fetch message summaries */
+export function getRawMessageSummaries(params = {}) {
+  return fetchApi('/raw-messages/summaries', params);
+}
+
+/** Save a revised summary */
+export function updateRawMessageSummary(id, revisedSummary) {
+  return requestApi(`/raw-messages/summaries/${id}`, {
+    method: 'PATCH',
+    body: { revised_summary: revisedSummary },
+  });
+}
+
 /** Fetch available channels */
 export function getRawMessageChannels() {
   return fetchApi('/raw-messages/channels');

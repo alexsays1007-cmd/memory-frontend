@@ -11,7 +11,15 @@ function formatDateRange(first, last) {
   return `${f.slice(5).replace('-', '/')} ~ ${l.slice(5).replace('-', '/')}`;
 }
 
-export default function SessionPanel({ open, onClose, onSelect, currentSession, currentChannel }) {
+export default function SessionPanel({
+  open,
+  onClose,
+  onSelect,
+  currentSession,
+  currentChannel,
+  currentThreadId,
+  currentExcludeThreadId,
+}) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -20,11 +28,15 @@ export default function SessionPanel({ open, onClose, onSelect, currentSession, 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    getSessions(currentChannel ? { channel: currentChannel } : {})
+    getSessions({
+      channel: currentChannel || undefined,
+      threadId: currentThreadId || undefined,
+      excludeThreadId: currentExcludeThreadId || undefined,
+    })
       .then(res => setSessions(res.sessions || []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [open, currentChannel]);
+  }, [open, currentChannel, currentThreadId, currentExcludeThreadId]);
 
   useEffect(() => {
     if (!open) return;

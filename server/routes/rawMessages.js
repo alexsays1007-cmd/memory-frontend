@@ -24,6 +24,12 @@ function rawMessagesTableExists(db) {
   );
 }
 
+function summariesTableExists(db) {
+  return Boolean(
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'message_summaries'").get()
+  );
+}
+
 function getUtcOffsetString(tz) {
   try {
     const now = new Date();
@@ -70,6 +76,16 @@ function buildWhere(query) {
   if (query.session) {
     where.push('session = @session');
     params.session = String(query.session);
+  }
+
+  if (query.threadId) {
+    where.push('thread_id = @threadId');
+    params.threadId = String(query.threadId);
+  }
+
+  if (query.excludeThreadId) {
+    where.push('(thread_id IS NULL OR thread_id != @excludeThreadId)');
+    params.excludeThreadId = String(query.excludeThreadId);
   }
 
   if (query.startUtc) {
@@ -187,6 +203,14 @@ router.get('/sessions', (req, res) => {
       whereParts.push('channel = @channel');
       params.channel = String(channelFilter);
     }
+    if (req.query.threadId) {
+      whereParts.push('thread_id = @threadId');
+      params.threadId = String(req.query.threadId);
+    }
+    if (req.query.excludeThreadId) {
+      whereParts.push('(thread_id IS NULL OR thread_id != @excludeThreadId)');
+      params.excludeThreadId = String(req.query.excludeThreadId);
+    }
     const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
 
     const liveStats = db.prepare(`
@@ -197,6 +221,7 @@ router.get('/sessions', (req, res) => {
         MIN(created) AS first_created,
         MAX(created) AS last_created,
         MAX(channel) AS channel,
+        MAX(thread_id) AS thread_id,
         MAX(agent) AS agent,
         MAX(source) AS source
       FROM raw_messages
@@ -217,6 +242,7 @@ router.get('/sessions', (req, res) => {
       session: s.session,
       title: metaMap[s.session]?.title || s.session,
       channel: s.channel,
+      thread_id: s.thread_id,
       agent: s.agent,
       source: s.source,
       message_count: s.message_count,
@@ -317,6 +343,14 @@ router.get('/dates', (req, res) => {
       where.push('agent = @agent');
       params.agent = String(req.query.agent);
     }
+    if (req.query.threadId) {
+      where.push('thread_id = @threadId');
+      params.threadId = String(req.query.threadId);
+    }
+    if (req.query.excludeThreadId) {
+      where.push('(thread_id IS NULL OR thread_id != @excludeThreadId)');
+      params.excludeThreadId = String(req.query.excludeThreadId);
+    }
     if (req.query.includeHidden === '1') {
       where.push('COALESCE(hidden, 0) = 1');
     } else {
@@ -340,6 +374,102 @@ router.get('/dates', (req, res) => {
   } catch (err) {
     console.error('Error fetching raw message dates:', err);
     res.status(500).json({ error: 'Failed to fetch raw message dates' });
+  }
+});
+
+router.get('/summaries', (req, res) => {
+  try {
+    const db = getDb();
+    if (!summariesTableExists(db)) {
+      return res.json({ summaries: [] });
+    }
+
+    const where = [];
+    const params = {};
+    if (req.query.channel) {
+      where.push('channel = @channel');
+      params.channel = String(req.query.channel);
+    }
+    if (req.query.threadId) {
+      where.push('thread_id = @threadId');
+      params.threadId = String(req.query.threadId);
+    }
+    if (req.query.kind) {
+      where.push('summary_kind = @kind');
+      params.kind = String(req.query.kind);
+    }
+    if (req.query.current === '1') {
+      where.push('COALESCE(is_current, 0) = 1');
+    }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const summaries = db.prepare(`
+      SELECT
+        id,
+        summary_key,
+        job_type,
+        channel,
+        thread_id,
+        scope,
+        summary_kind,
+        start_message_id,
+        end_message_id,
+        start_created,
+        end_created,
+        message_count,
+        source_summary_ids,
+        original_summary,
+        revised_summary,
+        model,
+        prompt_version,
+        is_current,
+        created_at,
+        updated_at
+      FROM message_summaries
+      ${whereClause}
+      ORDER BY
+        CASE WHEN summary_kind = 'rolling' THEN 0 ELSE 1 END,
+        COALESCE(is_current, 0) DESC,
+        start_created DESC,
+        id DESC
+    `).all(params);
+
+    res.json({ summaries });
+  } catch (err) {
+    console.error('Error fetching raw message summaries:', err);
+    res.status(500).json({ error: 'Failed to fetch summaries' });
+  }
+});
+
+router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
+  try {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid summary id' });
+    }
+
+    const db = getDb();
+    if (!summariesTableExists(db)) {
+      return res.status(404).json({ error: 'message_summaries table does not exist' });
+    }
+
+    const existing = db.prepare('SELECT id FROM message_summaries WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Summary not found' });
+    }
+
+    const revisedSummary = typeof req.body?.revised_summary === 'string'
+      ? req.body.revised_summary
+      : null;
+
+    db.prepare('UPDATE message_summaries SET revised_summary = ?, updated_at = ? WHERE id = ?')
+      .run(revisedSummary, nowIso(), id);
+
+    const summary = db.prepare('SELECT * FROM message_summaries WHERE id = ?').get(id);
+    res.json({ ok: true, summary });
+  } catch (err) {
+    console.error('Error updating summary:', err);
+    res.status(500).json({ error: 'Failed to update summary' });
   }
 });
 
