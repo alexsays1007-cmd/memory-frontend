@@ -39,3 +39,4 @@ server/package-lock.json
 # usage runtime data
 server/scripts/usage-history.json
 server/scripts/*-latest.json
+.claude/
