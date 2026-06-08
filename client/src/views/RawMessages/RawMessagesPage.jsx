@@ -529,6 +529,21 @@ export default function RawMessagesPage() {
     return `${first} ~ ${last}`;
   };
 
+  const formatSummaryTimestamp = (value) => {
+    const date = parseToLocalDate(value);
+    if (!date) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${month}/${day} ${hours}:${minutes}`;
+  };
+
+  const formatPromptVersion = (value = '') => {
+    const match = value.match(/v\d+$/i);
+    return match ? match[0].toLowerCase() : value;
+  };
+
   const displaySummaryText = (text = '') => (
     text.replace(/\n?【摘要完】\s*$/u, '').trim()
   );
@@ -965,6 +980,15 @@ export default function RawMessagesPage() {
                       {summary.is_current ? <span>current</span> : null}
                       <span>{summary.message_count} msgs</span>
                       <span>{formatSummaryRange(summary)}</span>
+                      {summary.updated_at ? (
+                        <span>updated {formatSummaryTimestamp(summary.updated_at)}</span>
+                      ) : null}
+                      {summary.end_created ? (
+                        <span>covers to {formatSummaryTimestamp(summary.end_created)}</span>
+                      ) : null}
+                      {summary.prompt_version ? (
+                        <span>{formatPromptVersion(summary.prompt_version)}</span>
+                      ) : null}
                     </div>
 
                     {isEditing ? (
