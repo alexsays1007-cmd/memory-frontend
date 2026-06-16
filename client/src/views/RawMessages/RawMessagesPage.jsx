@@ -105,6 +105,8 @@ export default function RawMessagesPage() {
   const [summaries, setSummaries] = useState([]);
   const [summariesLoading, setSummariesLoading] = useState(false);
   const [summaryKind, setSummaryKind] = useState('rolling');
+  const [summarySource, setSummarySource] = useState('ember');
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [editingSummaryId, setEditingSummaryId] = useState(null);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
@@ -762,11 +764,13 @@ export default function RawMessagesPage() {
             </button>
 
             <button
-              className={`stream-chip summary-chip ${showSummaries ? 'active' : ''}`}
+              className={`stream-chip icon-chip summary-chip ${showSummaries ? 'active' : ''}`}
               onClick={() => setShowSummaries(!showSummaries)}
               title="Summary"
             >
-              Summary
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
             </button>
 
             <button
@@ -946,86 +950,138 @@ export default function RawMessagesPage() {
                 {sourceFilter === 'telegram-group' ? 'Group memory' : 'Filtered summaries'}
               </div>
             </div>
-            <div className="summary-kind-tabs">
-              <button
-                className={summaryKind === 'rolling' ? 'active' : ''}
-                onClick={() => setSummaryKind('rolling')}
-              >
-                Rolling
-              </button>
-              <button
-                className={summaryKind === 'chunk' ? 'active' : ''}
-                onClick={() => setSummaryKind('chunk')}
-              >
-                Chunk
-              </button>
-            </div>
           </div>
 
-          {summariesLoading ? (
-            <div className="summary-panel-empty">Loading summaries...</div>
-          ) : summaries.length === 0 ? (
-            <div className="summary-panel-empty">
-              No summaries yet for this filter.
-            </div>
-          ) : (
-            <div className="summary-list">
-              {summaries.map(summary => {
-                const visibleSummary = displaySummaryText(summary.revised_summary || summary.original_summary);
-                const isEditing = editingSummaryId === summary.id;
-                return (
-                  <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''}`}>
-                    <div className="summary-item-meta">
-                      <span>{summary.summary_kind}</span>
-                      {summary.is_current ? <span>current</span> : null}
-                      <span>{summary.message_count} msgs</span>
-                      <span>{formatSummaryRange(summary)}</span>
-                      {summary.updated_at ? (
-                        <span>updated {formatSummaryTimestamp(summary.updated_at)}</span>
-                      ) : null}
-                      {summary.end_created ? (
-                        <span>covers to {formatSummaryTimestamp(summary.end_created)}</span>
-                      ) : null}
-                      {summary.prompt_version ? (
-                        <span>{formatPromptVersion(summary.prompt_version)}</span>
-                      ) : null}
-                    </div>
+          <div className="summary-source-tabs">
+            <button
+              className={summarySource === 'ember' ? 'active' : ''}
+              onClick={() => setSummarySource('ember')}
+            >
+              小烬
+            </button>
+            <button
+              className={summarySource === 'riven' ? 'source-coming-soon' : ''}
+              onClick={() => {}}
+              disabled
+            >
+              Riven
+              <span className="coming-soon-badge">soon</span>
+            </button>
+          </div>
 
-                    {isEditing ? (
-                      <>
-                        <textarea
-                          className="summary-editor"
-                          value={summaryDraft}
-                          onChange={e => setSummaryDraft(e.target.value)}
-                          rows={12}
-                        />
-                        <div className="summary-actions">
-                          <button onClick={cancelEditSummary}>Cancel</button>
-                          <button className="primary" onClick={() => saveSummary(summary)} disabled={savingSummary}>
-                            {savingSummary ? 'Saving...' : 'Save revision'}
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <pre className="summary-text">{visibleSummary}</pre>
-                        {summary.revised_summary ? (
-                          <details className="summary-original">
-                            <summary>DS original</summary>
-                            <pre>{displaySummaryText(summary.original_summary)}</pre>
-                          </details>
+          {summarySource === 'riven' ? (
+            <div className="summary-panel-empty">Riven summary coming soon ✦</div>
+          ) : (
+            <>
+              <div className="summary-kind-tabs-row">
+                <div className="summary-kind-tabs">
+                  <button
+                    className={summaryKind === 'rolling' ? 'active' : ''}
+                    onClick={() => setSummaryKind('rolling')}
+                  >
+                    Rolling
+                  </button>
+                  <button
+                    className={summaryKind === 'chunk' ? 'active' : ''}
+                    onClick={() => setSummaryKind('chunk')}
+                  >
+                    Chunk
+                  </button>
+                </div>
+              </div>
+
+              {summariesLoading ? (
+                <div className="summary-panel-empty">Loading summaries...</div>
+              ) : summaries.length === 0 ? (
+                <div className="summary-panel-empty">
+                  No summaries yet for this filter.
+                </div>
+              ) : (() => {
+                const latestSummary = summaries[0];
+                const olderSummaries = summaries.slice(1);
+                const renderSummaryItem = (summary) => {
+                  const visibleSummary = displaySummaryText(summary.revised_summary || summary.original_summary);
+                  const isEditing = editingSummaryId === summary.id;
+                  return (
+                    <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''}`}>
+                      <div className="summary-item-meta">
+                        <span>{summary.summary_kind}</span>
+                        {summary.is_current ? <span>current</span> : null}
+                        <span>{summary.message_count} msgs</span>
+                        <span>{formatSummaryRange(summary)}</span>
+                        {summary.updated_at ? (
+                          <span>updated {formatSummaryTimestamp(summary.updated_at)}</span>
                         ) : null}
-                        <div className="summary-actions">
-                          <button onClick={() => startEditSummary(summary)}>
-                            {summary.revised_summary ? 'Edit revision' : 'Revise'}
+                        {summary.end_created ? (
+                          <span>covers to {formatSummaryTimestamp(summary.end_created)}</span>
+                        ) : null}
+                        {summary.prompt_version ? (
+                          <span>{formatPromptVersion(summary.prompt_version)}</span>
+                        ) : null}
+                      </div>
+
+                      {isEditing ? (
+                        <>
+                          <textarea
+                            className="summary-editor"
+                            value={summaryDraft}
+                            onChange={e => setSummaryDraft(e.target.value)}
+                            rows={12}
+                          />
+                          <div className="summary-actions">
+                            <button onClick={cancelEditSummary}>Cancel</button>
+                            <button className="primary" onClick={() => saveSummary(summary)} disabled={savingSummary}>
+                              {savingSummary ? 'Saving...' : 'Save revision'}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <pre className="summary-text">{visibleSummary}</pre>
+                          {summary.revised_summary ? (
+                            <details className="summary-original">
+                              <summary>DS original</summary>
+                              <pre>{displaySummaryText(summary.original_summary)}</pre>
+                            </details>
+                          ) : null}
+                          <div className="summary-actions">
+                            <button onClick={() => startEditSummary(summary)}>
+                              {summary.revised_summary ? 'Edit revision' : 'Revise'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  );
+                };
+
+                return (
+                  <div className="summary-list">
+                    {renderSummaryItem(latestSummary)}
+                    {olderSummaries.length > 0 && (
+                      summaryExpanded ? (
+                        <>
+                          {olderSummaries.map(s => renderSummaryItem(s))}
+                          <button
+                            className="summary-expand-btn"
+                            onClick={() => setSummaryExpanded(false)}
+                          >
+                            收起
                           </button>
-                        </div>
-                      </>
+                        </>
+                      ) : (
+                        <button
+                          className="summary-expand-btn"
+                          onClick={() => setSummaryExpanded(true)}
+                        >
+                          查看更早 {olderSummaries.length} 条
+                        </button>
+                      )
                     )}
-                  </article>
+                  </div>
                 );
-              })}
-            </div>
+              })()}
+            </>
           )}
         </section>
       )}

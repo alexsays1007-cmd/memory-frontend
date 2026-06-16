@@ -419,10 +419,83 @@
   color: var(--text-muted);
 }
 
+/* Source tabs (小烬 / Riven) */
+.summary-source-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.summary-source-tabs button {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.summary-source-tabs button.active {
+  color: var(--accent-text);
+  border-bottom-color: var(--accent-text);
+  font-weight: var(--font-medium);
+}
+
+.summary-source-tabs button:hover:not(:disabled) {
+  color: var(--text-main);
+  background: var(--surface-soft);
+}
+
+.summary-source-tabs button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 10px;
+  vertical-align: middle;
+}
+
+/* Kind tabs row (Rolling / Chunk) */
+.summary-kind-tabs-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
 .summary-kind-tabs {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* Expand / Collapse button */
+.summary-expand-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.summary-expand-btn:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface-soft));
 }
 
 .summary-kind-tabs button,
