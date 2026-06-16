@@ -107,6 +107,7 @@ export default function RawMessagesPage() {
   const [summaryKind, setSummaryKind] = useState('rolling');
   const [summarySource, setSummarySource] = useState('ember');
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryTextExpanded, setSummaryTextExpanded] = useState({});
   const [editingSummaryId, setEditingSummaryId] = useState(null);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
@@ -690,6 +691,17 @@ export default function RawMessagesPage() {
             <h1 className="page-title">对话流</h1>
             <span className="page-subtitle">RAW MESSAGE</span>
           </div>
+          <button
+            className="title-import-btn"
+            onClick={() => setShowImport(true)}
+            title="导入对话"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -718,18 +730,6 @@ export default function RawMessagesPage() {
           </div>
 
           <div className="stream-controls">
-            <button
-              className="stream-chip icon-chip import-chip"
-              onClick={() => setShowImport(true)}
-              title="导入对话"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-            </button>
-
             <div className="stream-date-wrapper">
               <button
                 className={`stream-date-btn ${hasDateFilter ? 'has-date' : ''}`}
@@ -765,7 +765,7 @@ export default function RawMessagesPage() {
 
             <button
               className={`stream-chip icon-chip summary-chip ${showSummaries ? 'active' : ''}`}
-              onClick={() => setShowSummaries(!showSummaries)}
+              onClick={() => { if (showSummaries) setSummaryExpanded(false); setShowSummaries(!showSummaries); }}
               title="Summary"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
@@ -1035,22 +1035,34 @@ export default function RawMessagesPage() {
                             </button>
                           </div>
                         </>
-                      ) : (
-                        <>
-                          <pre className="summary-text">{visibleSummary}</pre>
-                          {summary.revised_summary ? (
-                            <details className="summary-original">
-                              <summary>DS original</summary>
-                              <pre>{displaySummaryText(summary.original_summary)}</pre>
-                            </details>
-                          ) : null}
-                          <div className="summary-actions">
-                            <button onClick={() => startEditSummary(summary)}>
-                              {summary.revised_summary ? 'Edit revision' : 'Revise'}
-                            </button>
-                          </div>
-                        </>
-                      )}
+                      ) : (() => {
+                        const isLong = visibleSummary.length > 600;
+                        const isTextExpanded = summaryTextExpanded[summary.id];
+                        return (
+                          <>
+                            <pre className={`summary-text ${isLong && !isTextExpanded ? 'summary-text-clamped' : ''}`}>{visibleSummary}</pre>
+                            {isLong && (
+                              <button
+                                className="summary-text-toggle"
+                                onClick={() => setSummaryTextExpanded(prev => ({ ...prev, [summary.id]: !prev[summary.id] }))}
+                              >
+                                {isTextExpanded ? '收起全文' : '展开全文'}
+                              </button>
+                            )}
+                            {summary.revised_summary ? (
+                              <details className="summary-original">
+                                <summary>DS original</summary>
+                                <pre>{displaySummaryText(summary.original_summary)}</pre>
+                              </details>
+                            ) : null}
+                            <div className="summary-actions">
+                              <button onClick={() => startEditSummary(summary)}>
+                                {summary.revised_summary ? 'Edit revision' : 'Revise'}
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </article>
                   );
                 };
@@ -1061,12 +1073,20 @@ export default function RawMessagesPage() {
                     {olderSummaries.length > 0 && (
                       summaryExpanded ? (
                         <>
-                          {olderSummaries.map(s => renderSummaryItem(s))}
                           <button
                             className="summary-expand-btn"
                             onClick={() => setSummaryExpanded(false)}
                           >
-                            收起
+                            收起 ↑
+                          </button>
+                          <div className="summary-older-scroll">
+                            {olderSummaries.map(s => renderSummaryItem(s))}
+                          </div>
+                          <button
+                            className="summary-expand-btn"
+                            onClick={() => setSummaryExpanded(false)}
+                          >
+                            收起 ↑
                           </button>
                         </>
                       ) : (
