@@ -1031,14 +1031,14 @@ export default function RawMessagesPage() {
                   const visibleSummary = displaySummaryText(summary.revised_summary || summary.original_summary);
                   const isEditing = editingSummaryId === summary.id;
                   return (
-                    <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''} ${summary.review_status === 'pending' ? 'pending' : ''}`}>
+                    <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''} ${summary.review_status === 'pending' && summary.summary_kind === 'rolling' ? 'pending' : ''}`}>
                       <div className="summary-item-meta">
                         <span>{summary.summary_kind}</span>
-                        {summary.review_status === 'pending' ? (
+                        {summary.summary_kind === 'rolling' && summary.review_status === 'pending' ? (
                           <span className="status-pending">待审</span>
-                        ) : summary.review_status === 'revised' ? (
+                        ) : summary.summary_kind === 'rolling' && summary.review_status === 'revised' ? (
                           <span className="status-revised">已改</span>
-                        ) : summary.review_status === 'approved' ? (
+                        ) : summary.summary_kind === 'rolling' && summary.review_status === 'approved' ? (
                           <span className="status-approved">✓</span>
                         ) : null}
                         {summary.is_current ? <span>current</span> : null}
@@ -1091,7 +1091,7 @@ export default function RawMessagesPage() {
                               </details>
                             ) : null}
                             <div className="summary-actions">
-                              {summary.review_status === 'pending' && (
+                              {summary.summary_kind === 'rolling' && summary.review_status === 'pending' && (
                                 <button className="approve-btn" onClick={() => handleApproveSummary(summary)}>
                                   ✓ 通过
                                 </button>
