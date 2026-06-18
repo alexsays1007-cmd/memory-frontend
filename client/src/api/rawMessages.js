@@ -31,6 +31,18 @@ export function updateRawMessageSummary(id, revisedSummary) {
   });
 }
 
+/** Get count of pending summaries */
+export function getPendingSummaryCount() {
+  return fetchApi('/raw-messages/summaries/pending-count');
+}
+
+/** Approve a summary without revision */
+export function approveSummary(id) {
+  return requestApi(`/raw-messages/summaries/${id}/approve`, {
+    method: 'PATCH',
+  });
+}
+
 /** Fetch available channels */
 export function getRawMessageChannels() {
   return fetchApi('/raw-messages/channels');

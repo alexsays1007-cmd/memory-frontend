@@ -30,6 +30,13 @@ function summariesTableExists(db) {
   );
 }
 
+function ensureReviewStatusColumn(db) {
+  const cols = db.prepare("PRAGMA table_info(message_summaries)").all();
+  if (!cols.some(c => c.name === 'review_status')) {
+    db.prepare("ALTER TABLE message_summaries ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'").run();
+  }
+}
+
 function getUtcOffsetString(tz) {
   try {
     const now = new Date();
@@ -383,6 +390,7 @@ router.get('/summaries', (req, res) => {
     if (!summariesTableExists(db)) {
       return res.json({ summaries: [] });
     }
+    ensureReviewStatusColumn(db);
 
     const where = [];
     const params = {};
@@ -423,6 +431,7 @@ router.get('/summaries', (req, res) => {
         model,
         prompt_version,
         is_current,
+        review_status,
         created_at,
         updated_at
       FROM message_summaries
@@ -438,6 +447,42 @@ router.get('/summaries', (req, res) => {
   } catch (err) {
     console.error('Error fetching raw message summaries:', err);
     res.status(500).json({ error: 'Failed to fetch summaries' });
+  }
+});
+
+router.get('/summaries/pending-count', (req, res) => {
+  try {
+    const db = getDb();
+    if (!summariesTableExists(db)) {
+      return res.json({ count: 0 });
+    }
+    ensureReviewStatusColumn(db);
+    const row = db.prepare("SELECT COUNT(*) as count FROM message_summaries WHERE review_status = 'pending'").get();
+    res.json({ count: row.count });
+  } catch (err) {
+    console.error('Error fetching pending count:', err);
+    res.status(500).json({ error: 'Failed to fetch pending count' });
+  }
+});
+
+router.patch('/summaries/:id/approve', requireMemoryWriteAccess, (req, res) => {
+  try {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid summary id' });
+    }
+    const db = getDb();
+    if (!summariesTableExists(db)) {
+      return res.status(404).json({ error: 'message_summaries table does not exist' });
+    }
+    ensureReviewStatusColumn(db);
+    db.prepare("UPDATE message_summaries SET review_status = 'approved', updated_at = ? WHERE id = ?")
+      .run(nowIso(), id);
+    const summary = db.prepare('SELECT * FROM message_summaries WHERE id = ?').get(id);
+    res.json({ ok: true, summary });
+  } catch (err) {
+    console.error('Error approving summary:', err);
+    res.status(500).json({ error: 'Failed to approve summary' });
   }
 });
 
@@ -462,8 +507,8 @@ router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
       ? req.body.revised_summary
       : null;
 
-    db.prepare('UPDATE message_summaries SET revised_summary = ?, updated_at = ? WHERE id = ?')
-      .run(revisedSummary, nowIso(), id);
+    db.prepare('UPDATE message_summaries SET revised_summary = ?, review_status = ?, updated_at = ? WHERE id = ?')
+      .run(revisedSummary, 'revised', nowIso(), id);
 
     const summary = db.prepare('SELECT * FROM message_summaries WHERE id = ?').get(id);
     res.json({ ok: true, summary });

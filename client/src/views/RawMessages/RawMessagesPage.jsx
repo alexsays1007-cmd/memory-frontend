@@ -5,6 +5,8 @@ import {
   getRawMessageDates,
   getRawMessageSummaries,
   updateRawMessageSummary,
+  getPendingSummaryCount,
+  approveSummary,
   hideMessage,
 } from '../../api/rawMessages';
 import { getMessageCreated, getMessageText, isSystemOrHidden } from '../../utils/message';
@@ -111,6 +113,7 @@ export default function RawMessagesPage() {
   const [editingSummaryId, setEditingSummaryId] = useState(null);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const searchTimer = useRef(null);
   const matchRefs = useRef([]);
@@ -233,6 +236,17 @@ export default function RawMessagesPage() {
   useEffect(() => {
     fetchSummaries();
   }, [fetchSummaries]);
+
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const res = await getPendingSummaryCount();
+      setPendingCount(res.count || 0);
+    } catch { setPendingCount(0); }
+  }, []);
+
+  useEffect(() => {
+    refreshPendingCount();
+  }, [refreshPendingCount]);
 
   const fetchMessages = useCallback(async (pageNum = 1, append = false) => {
     if (append) setLoadingMore(true);
@@ -517,10 +531,21 @@ export default function RawMessagesPage() {
       const result = await updateRawMessageSummary(summary.id, summaryDraft);
       setSummaries(prev => prev.map(item => item.id === summary.id ? result.summary : item));
       cancelEditSummary();
+      refreshPendingCount();
     } catch (err) {
       console.error('Failed to save summary:', err);
     } finally {
       setSavingSummary(false);
+    }
+  };
+
+  const handleApproveSummary = async (summary) => {
+    try {
+      const result = await approveSummary(summary.id);
+      setSummaries(prev => prev.map(item => item.id === summary.id ? result.summary : item));
+      refreshPendingCount();
+    } catch (err) {
+      console.error('Failed to approve summary:', err);
     }
   };
 
@@ -771,6 +796,9 @@ export default function RawMessagesPage() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width: 14, height: 14}}>
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
+              {pendingCount > 0 && (
+                <span className="summary-badge">{pendingCount}</span>
+              )}
             </button>
 
             <button
@@ -1003,9 +1031,16 @@ export default function RawMessagesPage() {
                   const visibleSummary = displaySummaryText(summary.revised_summary || summary.original_summary);
                   const isEditing = editingSummaryId === summary.id;
                   return (
-                    <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''}`}>
+                    <article key={summary.id} className={`summary-item ${summary.is_current ? 'current' : ''} ${summary.review_status === 'pending' ? 'pending' : ''}`}>
                       <div className="summary-item-meta">
                         <span>{summary.summary_kind}</span>
+                        {summary.review_status === 'pending' ? (
+                          <span className="status-pending">待审</span>
+                        ) : summary.review_status === 'revised' ? (
+                          <span className="status-revised">已改</span>
+                        ) : summary.review_status === 'approved' ? (
+                          <span className="status-approved">✓</span>
+                        ) : null}
                         {summary.is_current ? <span>current</span> : null}
                         <span>{summary.message_count} msgs</span>
                         <span>{formatSummaryRange(summary)}</span>
@@ -1056,6 +1091,11 @@ export default function RawMessagesPage() {
                               </details>
                             ) : null}
                             <div className="summary-actions">
+                              {summary.review_status === 'pending' && (
+                                <button className="approve-btn" onClick={() => handleApproveSummary(summary)}>
+                                  ✓ 通过
+                                </button>
+                              )}
                               <button onClick={() => startEditSummary(summary)}>
                                 {summary.revised_summary ? 'Edit revision' : 'Revise'}
                               </button>

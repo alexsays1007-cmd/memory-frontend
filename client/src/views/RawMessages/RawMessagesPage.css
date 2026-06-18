@@ -507,6 +507,59 @@
 }
 
 /* Expand / Collapse button */
+/* Summary badge on lightning icon */
+.summary-chip {
+  position: relative;
+}
+
+.summary-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--text-main);
+  font-size: 9px;
+  font-weight: var(--font-medium);
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Review status tags */
+.summary-item-meta .status-pending {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));
+  color: var(--accent-text);
+}
+
+.summary-item-meta .status-revised {
+  background: color-mix(in srgb, var(--riven-muted) 20%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.summary-item-meta .status-approved {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+/* Pending summary item subtle highlight */
+.summary-item.pending {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Approve button */
+.summary-actions .approve-btn {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.summary-actions .approve-btn:hover {
+  background: var(--accent-soft);
+}
+
 .summary-expand-btn {
   display: block;
   width: 100%;
