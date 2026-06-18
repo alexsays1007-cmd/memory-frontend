@@ -34,7 +34,7 @@ function ensureReviewStatusColumn(db) {
   const cols = db.prepare("PRAGMA table_info(message_summaries)").all();
   if (!cols.some(c => c.name === 'review_status')) {
     db.prepare("ALTER TABLE message_summaries ADD COLUMN review_status TEXT NOT NULL DEFAULT 'pending'").run();
-    db.prepare("UPDATE message_summaries SET review_status = 'approved' WHERE summary_kind != 'rolling'").run();
+    db.prepare("UPDATE message_summaries SET review_status = 'approved'").run();
   }
 }
 
@@ -458,7 +458,7 @@ router.get('/summaries/pending-count', (req, res) => {
       return res.json({ count: 0 });
     }
     ensureReviewStatusColumn(db);
-    const row = db.prepare("SELECT COUNT(*) as count FROM message_summaries WHERE review_status = 'pending' AND summary_kind = 'rolling'").get();
+    const row = db.prepare("SELECT COUNT(*) as count FROM message_summaries WHERE review_status = 'pending' AND summary_kind = 'rolling' AND is_current = 1").get();
     res.json({ count: row.count });
   } catch (err) {
     console.error('Error fetching pending count:', err);
