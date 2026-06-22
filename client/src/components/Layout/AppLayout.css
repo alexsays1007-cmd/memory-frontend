@@ -17,6 +17,14 @@
   padding-bottom: calc(80px + var(--safe-area-bottom));
 }
 
+.app-layout.in-telegram {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.app-layout.in-telegram .app-main {
+  padding-top: var(--space-2);
+}
+
 .dev-mock-badge {
   position: fixed;
   top: 8px;

@@ -1,3 +1,5 @@
+import { verifyTelegramUser } from './telegramAuth.js';
+
 function splitList(value = '') {
   return value
     .split(',')
@@ -39,6 +41,10 @@ export function requireMemoryWriteAccess(req, res, next) {
 
   const accessEmail = getCloudflareAccessEmail(req);
   if (allowedEmails.length > 0 && accessEmail && allowedEmails.includes(accessEmail)) {
+    return next();
+  }
+
+  if (verifyTelegramUser(req)) {
     return next();
   }
 
