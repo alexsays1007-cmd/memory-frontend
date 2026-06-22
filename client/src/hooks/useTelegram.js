@@ -15,6 +15,12 @@ export function useTelegram() {
   const inTelegram = isTelegramWebApp();
 
   useEffect(() => {
+    if (!inTelegram && window.location.hostname.startsWith('tg.')) {
+      window.location.replace(
+        window.location.href.replace(window.location.hostname, window.location.hostname.replace('tg.', 'memory.'))
+      );
+      return;
+    }
     if (!inTelegram) return;
 
     tg.ready();
