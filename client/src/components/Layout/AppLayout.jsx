@@ -33,12 +33,25 @@ export default function AppLayout() {
   return (
     <div className={`app-layout ${inTelegram ? 'in-telegram' : ''}`}>
       {!inTelegram && <Header onOpenConsole={() => setConsoleOpen(true)} />}
+      {inTelegram && (
+        <button
+          className="tg-console-trigger"
+          type="button"
+          onClick={() => setConsoleOpen(true)}
+          aria-label="控制台"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+            <path d="M4 7h8" /><path d="M16 7h4" /><path d="M14 5v4" />
+            <path d="M4 17h4" /><path d="M12 17h8" /><path d="M10 15v4" />
+          </svg>
+        </button>
+      )}
       <main className="app-main">
         <Outlet />
       </main>
       <BottomNav />
       {!inTelegram && <ThemePicker />}
-      {!inTelegram && <ConsoleModal open={consoleOpen} onClose={() => setConsoleOpen(false)} />}
+      <ConsoleModal open={consoleOpen} onClose={() => setConsoleOpen(false)} />
       {showMockBadge && (
         <div className="dev-mock-badge">Mock data enabled</div>
       )}

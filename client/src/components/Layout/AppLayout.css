@@ -25,6 +25,29 @@
   padding-top: var(--space-2);
 }
 
+.tg-console-trigger {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light, rgba(128,128,128,0.2));
+  background: var(--bg-secondary, rgba(0,0,0,0.06));
+  color: var(--text-secondary, inherit);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.tg-console-trigger:active {
+  opacity: 0.6;
+}
+
 .dev-mock-badge {
   position: fixed;
   top: 8px;
