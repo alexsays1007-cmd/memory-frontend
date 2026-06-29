@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { getPendingSummaryCount } from '../../api/rawMessages';
 import './BottomNav.css';
 
 const navItems = [
@@ -26,6 +28,22 @@ const navItems = [
 ];
 
 export default function BottomNav() {
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await getPendingSummaryCount();
+      setPendingCount(res.count || 0);
+    } catch { setPendingCount(0); }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const handler = () => refresh();
+    window.addEventListener('summary-status-changed', handler);
+    return () => window.removeEventListener('summary-status-changed', handler);
+  }, [refresh]);
+
   return (
     <nav className="bottom-nav">
       <div className="bottom-nav-inner">
@@ -36,7 +54,12 @@ export default function BottomNav() {
             className={({ isActive }) => `bottom-nav-link ${isActive ? 'active' : ''}`}
             end={item.path === '/'}
           >
-            <div className="nav-icon">{item.icon}</div>
+            <div className="nav-icon">
+              {item.icon}
+              {item.path === '/stream' && pendingCount > 0 && (
+                <span className="nav-badge" />
+              )}
+            </div>
             <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}

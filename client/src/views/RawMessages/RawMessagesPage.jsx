@@ -532,6 +532,7 @@ export default function RawMessagesPage() {
       setSummaries(prev => prev.map(item => item.id === summary.id ? result.summary : item));
       cancelEditSummary();
       refreshPendingCount();
+      window.dispatchEvent(new Event('summary-status-changed'));
     } catch (err) {
       console.error('Failed to save summary:', err);
     } finally {
@@ -544,6 +545,7 @@ export default function RawMessagesPage() {
       const result = await approveSummary(summary.id);
       setSummaries(prev => prev.map(item => item.id === summary.id ? result.summary : item));
       refreshPendingCount();
+      window.dispatchEvent(new Event('summary-status-changed'));
     } catch (err) {
       console.error('Failed to approve summary:', err);
     }
