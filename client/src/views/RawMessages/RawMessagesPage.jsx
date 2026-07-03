@@ -219,11 +219,10 @@ export default function RawMessagesPage() {
     if (!showSummaries) return;
     setSummariesLoading(true);
     try {
-      const result = await getRawMessageSummaries({
-        channel: channel || undefined,
-        threadId: threadId || undefined,
-        kind: summaryKind || undefined,
-      });
+      const params = summarySource === 'riven'
+        ? { scope: 'riven_velvy', kind: 'daily' }
+        : { channel: channel || undefined, threadId: threadId || undefined, kind: summaryKind || undefined };
+      const result = await getRawMessageSummaries(params);
       setSummaries(result.summaries || []);
     } catch (err) {
       console.error('Failed to fetch summaries:', err);
@@ -231,7 +230,7 @@ export default function RawMessagesPage() {
     } finally {
       setSummariesLoading(false);
     }
-  }, [showSummaries, channel, threadId, summaryKind]);
+  }, [showSummaries, summarySource, channel, threadId, summaryKind]);
 
   useEffect(() => {
     fetchSummaries();
@@ -990,17 +989,113 @@ export default function RawMessagesPage() {
               小烬
             </button>
             <button
-              className={summarySource === 'riven' ? 'source-coming-soon' : ''}
-              onClick={() => {}}
-              disabled
+              className={summarySource === 'riven' ? 'active' : ''}
+              onClick={() => setSummarySource('riven')}
             >
               Riven
-              <span className="coming-soon-badge">soon</span>
             </button>
           </div>
 
           {summarySource === 'riven' ? (
-            <div className="summary-panel-empty">Riven summary coming soon ✦</div>
+            summariesLoading ? (
+              <div className="summary-panel-empty">Loading summaries...</div>
+            ) : summaries.length === 0 ? (
+              <div className="summary-panel-empty">No daily summaries yet.</div>
+            ) : (() => {
+              const [expandedDaily, ...olderDailies] = summaries;
+              const renderDailyCard = (summary, defaultOpen) => {
+                let parsed = null;
+                try { parsed = JSON.parse(summary.original_summary); } catch {}
+                if (!parsed) return null;
+                const dateStr = parsed.date || summary.start_created?.slice(0, 10) || '';
+                const dateObj = dateStr ? new Date(`${dateStr}T12:00:00`) : null;
+                const dateLabel = dateObj
+                  ? dateObj.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
+                  : dateStr;
+                const isOpen = summaryTextExpanded[`daily-${summary.id}`] ?? defaultOpen;
+                return (
+                  <article key={summary.id} className={`daily-card ${isOpen ? 'daily-card-open' : ''} ${summary.review_status === 'pending' ? 'pending' : ''}`}>
+                    <button
+                      className="daily-card-header"
+                      onClick={() => setSummaryTextExpanded(prev => ({
+                        ...prev, [`daily-${summary.id}`]: !isOpen
+                      }))}
+                    >
+                      <span className="daily-card-date">{dateLabel}</span>
+                      <span className="daily-card-meta">
+                        {parsed.topics?.length > 0 && (
+                          <span className="daily-card-topics-inline">
+                            {parsed.topics.slice(0, 3).join(' · ')}
+                            {parsed.topics.length > 3 && ' ...'}
+                          </span>
+                        )}
+                        {summary.review_status === 'pending' && <span className="status-pending">待审</span>}
+                        {summary.review_status === 'revised' && <span className="status-revised">已改</span>}
+                        {summary.review_status === 'approved' && <span className="status-approved">✓</span>}
+                      </span>
+                      <svg className={`daily-card-caret ${isOpen ? 'open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </button>
+                    {isOpen && (
+                      <div className="daily-card-body">
+                        <div className="daily-section">
+                          <pre className="summary-text">{parsed.recap}</pre>
+                        </div>
+                        {parsed.moments?.length > 0 && (
+                          <details className="daily-section daily-details" open>
+                            <summary className="daily-section-title">关键时刻 ({parsed.moments.length})</summary>
+                            <ul className="daily-moments">
+                              {parsed.moments.map((m, i) => <li key={i}>{m}</li>)}
+                            </ul>
+                          </details>
+                        )}
+                        {parsed.open_loops?.length > 0 && (
+                          <details className="daily-section daily-details">
+                            <summary className="daily-section-title">未关闭 ({parsed.open_loops.length})</summary>
+                            <ul className="daily-open-loops">
+                              {parsed.open_loops.map((l, i) => <li key={i}>{l}</li>)}
+                            </ul>
+                          </details>
+                        )}
+                        {parsed.topics?.length > 0 && (
+                          <div className="daily-section">
+                            <div className="daily-section-title">Topics</div>
+                            <div className="daily-tags">
+                              {parsed.topics.map((t, i) => <span key={i} className="daily-tag">{t}</span>)}
+                            </div>
+                          </div>
+                        )}
+                        {parsed.entities?.length > 0 && (
+                          <div className="daily-section">
+                            <div className="daily-section-title">Entities</div>
+                            <div className="daily-tags">
+                              {parsed.entities.map((e, i) => <span key={i} className="daily-tag daily-tag-entity">{e}</span>)}
+                            </div>
+                          </div>
+                        )}
+                        <div className="summary-actions">
+                          {summary.review_status === 'pending' && (
+                            <button className="approve-btn" onClick={() => handleApproveSummary(summary)}>
+                              ✓ 通过
+                            </button>
+                          )}
+                          <button onClick={() => startEditSummary(summary)}>
+                            {summary.revised_summary ? 'Edit revision' : 'Revise'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              };
+              return (
+                <div className="daily-list">
+                  {renderDailyCard(expandedDaily, true)}
+                  {olderDailies.map(s => renderDailyCard(s, false))}
+                </div>
+              );
+            })()
           ) : (
             <>
               <div className="summary-kind-tabs-row">

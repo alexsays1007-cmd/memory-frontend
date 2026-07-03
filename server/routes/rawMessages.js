@@ -407,6 +407,10 @@ router.get('/summaries', (req, res) => {
       where.push('summary_kind = @kind');
       params.kind = String(req.query.kind);
     }
+    if (req.query.scope) {
+      where.push('scope = @scope');
+      params.scope = String(req.query.scope);
+    }
     if (req.query.current === '1') {
       where.push('COALESCE(is_current, 0) = 1');
     }
