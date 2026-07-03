@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getForgeStatus, saveForgeConfig } from '../../api/forge.js';
 import { getUsage } from '../../api/usage.js';
 import './ConsoleModal.css';
 
@@ -198,18 +199,233 @@ function UsagePanel({ usage, loading, error }) {
   );
 }
 
-function ForgePanel() {
+function formatTokens(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 'unknown';
+  return `${Math.round(n / 1000)}k`;
+}
+
+function formatTime(value) {
+  if (!value) return 'unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'unknown';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function shortSession(value = '') {
+  return value ? `${value.slice(0, 8)}...${value.slice(-6)}` : 'unknown';
+}
+
+function ForgeNumberField({ label, hint, value, min, max, step, onChange }) {
+  return (
+    <label className="forge-field">
+      <span>{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={event => onChange(Number(event.target.value))}
+      />
+      <small>{hint}</small>
+    </label>
+  );
+}
+
+function ForgePanel({ refreshSignal = 0 }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [panelUpdatedAt, setPanelUpdatedAt] = useState('');
+  const [form, setForm] = useState({
+    enabled: true,
+    notifyOnly: false,
+    retainTokens: 160000,
+    warnTokens: 260000,
+    autoTokens: 360000,
+    cooldownMinutes: 180,
+    telegramNotifications: true,
+  });
+
+  const usedTokens = Number(status?.state?.last_used_tokens || 0);
+  const autoTokens = Number(form.autoTokens || 1);
+  const usedRatio = Math.max(0, Math.min(100, Math.round((usedTokens / autoTokens) * 100)));
+
+  async function refreshForge({ quiet = false } = {}) {
+    if (!quiet) {
+      setLoading(true);
+      setMessage('');
+    }
+    try {
+      const data = await getForgeStatus();
+      setStatus(data);
+      setPanelUpdatedAt(new Date().toISOString());
+      if (data.config) {
+        setForm({
+          enabled: Boolean(data.config.enabled),
+          notifyOnly: Boolean(data.config.notify_only),
+          retainTokens: data.config.retain_tokens || 160000,
+          warnTokens: data.config.warn_tokens || 260000,
+          autoTokens: data.config.auto_tokens || 360000,
+          cooldownMinutes: data.config.cooldown_minutes || 180,
+          telegramNotifications: data.config.telegram_notifications !== false,
+        });
+      }
+    } catch (err) {
+      if (!quiet) setMessage(err.message);
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setMessage('');
+    try {
+      const data = await saveForgeConfig(form);
+      setStatus(data);
+      setMessage('已保存。这里只改配置，不会重启 Telegram Claude。');
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshForge();
+    const timer = window.setInterval(() => {
+      refreshForge({ quiet: true });
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [refreshSignal]);
+
   return (
     <div className="forge-console-panel">
-      <section className="forge-console-card">
-        <span>Manual Forge</span>
-        <h3>Ready for controls</h3>
-        <p>Forge actions will live here after the usage panel is settled. Dangerous actions will stay behind confirmation.</p>
+      <section className="forge-console-card forge-live-card">
+        <div className="forge-card-head">
+          <div>
+            <span>Forge 状态</span>
+            <h3>{loading ? '正在读取' : (form.enabled ? '自动 Forge 开着' : '自动 Forge 关着')}</h3>
+            <p>当前上下文会每 30 秒自动刷新一次。</p>
+          </div>
+          <button className="forge-mini-button" type="button" onClick={refreshForge} disabled={loading || saving}>
+            刷新
+          </button>
+        </div>
+
+        <div className="forge-stat-grid">
+          <div>
+            <small>当前上下文</small>
+            <strong>{formatTokens(usedTokens)}</strong>
+            <em>{usedRatio}% / 自动 Forge 点</em>
+          </div>
+          <div>
+            <small>提醒点</small>
+            <strong>{formatTokens(form.warnTokens)}</strong>
+            <em>快到这里时提醒你</em>
+          </div>
+          <div>
+            <small>自动 Forge 点</small>
+            <strong>{formatTokens(form.autoTokens)}</strong>
+            <em>到这里才自动搬家</em>
+          </div>
+          <div>
+            <small>保留尾巴</small>
+            <strong>{formatTokens(form.retainTokens)}</strong>
+            <em>新 session 带走多少旧上下文</em>
+          </div>
+        </div>
+
+        <div className="forge-progress-track" aria-label="当前上下文占自动 Forge 点的比例">
+          <div style={{ width: `${usedRatio}%` }} />
+        </div>
+
+        <div className="forge-meta-row">
+          <span>Session: {shortSession(status?.state?.last_session_id)}</span>
+          <span>Forge 检查: {formatTime(status?.state?.last_checked_at)}</span>
+          <span>面板刷新: {formatTime(panelUpdatedAt)}</span>
+        </div>
       </section>
-      <section className="forge-console-card soft">
-        <span>Runtime</span>
-        <h3>Quiet by default</h3>
-        <p>This tab is only a shell for now, so it will not restart or touch any production service.</p>
+
+      <section className="forge-console-card">
+        <span>Forge 设置</span>
+        <div className="forge-form-grid">
+          <ForgeNumberField
+            label="提醒点"
+            hint="到这个上下文长度时提醒你"
+            value={form.warnTokens}
+            min="50000"
+            max="800000"
+            step="5000"
+            onChange={value => setForm(prev => ({ ...prev, warnTokens: value }))}
+          />
+          <ForgeNumberField
+            label="自动 Forge 点"
+            hint="到这个长度才自动切新 session"
+            value={form.autoTokens}
+            min="60000"
+            max="900000"
+            step="5000"
+            onChange={value => setForm(prev => ({ ...prev, autoTokens: value }))}
+          />
+          <ForgeNumberField
+            label="新 session 保留尾巴"
+            hint="Forge 后带过去的最近上下文"
+            value={form.retainTokens}
+            min="30000"
+            max="300000"
+            step="5000"
+            onChange={value => setForm(prev => ({ ...prev, retainTokens: value }))}
+          />
+          <ForgeNumberField
+            label="冷却时间"
+            hint="两次自动 Forge 之间至少隔多久"
+            value={form.cooldownMinutes}
+            min="15"
+            max="1440"
+            step="15"
+            onChange={value => setForm(prev => ({ ...prev, cooldownMinutes: value }))}
+          />
+        </div>
+
+        <div className="forge-toggle-row">
+          <label>
+            <input
+              type="checkbox"
+              checked={form.enabled}
+              onChange={event => setForm(prev => ({ ...prev, enabled: event.target.checked }))}
+            />
+            <span>允许自动 Forge</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.notifyOnly}
+              onChange={event => setForm(prev => ({ ...prev, notifyOnly: event.target.checked }))}
+            />
+            <span>只提醒，不自动切</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.telegramNotifications}
+              onChange={event => setForm(prev => ({ ...prev, telegramNotifications: event.target.checked }))}
+            />
+            <span>Telegram 提醒</span>
+          </label>
+        </div>
+
+        <div className="forge-save-row">
+          <p>保存只会改 Forge 配置，不会重启 Claude，也不会切 session。</p>
+          <button type="button" onClick={handleSave} disabled={loading || saving}>
+            {saving ? '保存中...' : '保存 Forge 设置'}
+          </button>
+        </div>
+
+        {message && <p className={`forge-console-message ${message.includes('已保存') ? 'ok' : 'error'}`}>{message}</p>}
       </section>
     </div>
   );
@@ -220,6 +436,7 @@ export default function ConsoleModal({ open, onClose }) {
   const [usage, setUsage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [forgeRefreshSignal, setForgeRefreshSignal] = useState(0);
 
   async function refreshUsage() {
     setLoading(true);
@@ -232,6 +449,14 @@ export default function ConsoleModal({ open, onClose }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function refreshActiveTab() {
+    if (activeTab === 'forge') {
+      setForgeRefreshSignal(value => value + 1);
+      return;
+    }
+    refreshUsage();
   }
 
   useEffect(() => {
@@ -261,7 +486,7 @@ export default function ConsoleModal({ open, onClose }) {
             <p>SYSTEM CONSOLE</p>
           </div>
           <div className="console-actions">
-            <IconButton label="Refresh usage" onClick={refreshUsage} disabled={loading}>
+            <IconButton label="Refresh" onClick={refreshActiveTab} disabled={loading}>
               <RefreshIcon />
             </IconButton>
             <IconButton label="Close console" onClick={onClose}>
@@ -289,7 +514,7 @@ export default function ConsoleModal({ open, onClose }) {
           {activeTab === 'usage' ? (
             <UsagePanel usage={usage} loading={loading} error={error} />
           ) : (
-            <ForgePanel />
+            <ForgePanel refreshSignal={forgeRefreshSignal} />
           )}
         </div>
       </section>

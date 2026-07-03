@@ -83,14 +83,13 @@ router.patch('/config', requireMemoryWriteAccess, async (req, res) => {
       ...current,
       enabled: Boolean(req.body.enabled),
       notify_only: Boolean(req.body.notifyOnly),
-      retain_tokens: clampInt(req.body.retainTokens, current.retain_tokens || 80000, 30000, 140000),
-      warn_tokens: clampInt(req.body.warnTokens, current.warn_tokens || 120000, 50000, 190000),
-      auto_tokens: clampInt(req.body.autoTokens, current.auto_tokens || 155000, 60000, 195000),
+      retain_tokens: clampInt(req.body.retainTokens, current.retain_tokens || 80000, 30000, 300000),
+      warn_tokens: clampInt(req.body.warnTokens, current.warn_tokens || 120000, 50000, 800000),
+      auto_tokens: clampInt(req.body.autoTokens, current.auto_tokens || 155000, 60000, 900000),
       cooldown_minutes: clampInt(req.body.cooldownMinutes, current.cooldown_minutes || 180, 15, 1440),
       telegram_notifications: req.body.telegramNotifications !== false,
     };
     writeJson(CONFIG_PATH, next);
-    await runSafe(AUTO_SCRIPT, [], 30000);
     res.json({
       ok: true,
       config: readJson(CONFIG_PATH),
