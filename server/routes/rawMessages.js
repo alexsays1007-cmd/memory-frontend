@@ -437,6 +437,7 @@ router.get('/summaries', (req, res) => {
         prompt_version,
         is_current,
         review_status,
+        review_note,
         created_at,
         updated_at
       FROM message_summaries

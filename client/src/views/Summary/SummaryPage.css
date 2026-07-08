@@ -1,0 +1,439 @@
+/* ================================================
+   Summary Page – Riven Daily Summaries
+   ================================================ */
+.summary-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: calc(var(--space-8) + 80px);
+}
+
+/* Week navigator */
+.sd-week-nav {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-1) 0;
+}
+
+.sd-week-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 6px;
+  box-shadow: var(--shadow-sm);
+}
+
+.sd-week-btn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sd-week-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sd-week-btn:hover {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+}
+
+.sd-week-label {
+  font-family: var(--font-title);
+  font-size: var(--text-base);
+  color: var(--text-main);
+  padding: 0 14px;
+  min-width: 120px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.sd-week-label:hover {
+  color: var(--accent);
+}
+
+/* Card list */
+.sd-card-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.sd-card {
+  border-bottom: 1px solid var(--border);
+}
+
+.sd-card:last-child {
+  border-bottom: none;
+}
+
+/* Card header */
+.sd-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.sd-card-header:hover {
+  background: var(--surface-soft);
+}
+
+.sd-card-date {
+  font-size: 13px;
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sd-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sd-card-topics-preview {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sd-status {
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.sd-status-pending {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));
+  color: var(--accent-text);
+}
+
+.sd-status-reviewed {
+  background: color-mix(in srgb, var(--riven-muted, var(--text-muted)) 15%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.sd-status-revised {
+  background: color-mix(in srgb, var(--riven-muted, var(--text-muted)) 20%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.sd-status-approved {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.sd-card-caret {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.sd-card-caret.open {
+  transform: rotate(180deg);
+}
+
+/* Card body */
+.sd-card-body {
+  padding: 0 20px 20px;
+}
+
+/* Top row: version tabs + review note button */
+.sd-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* Version tabs */
+.sd-version-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.sd-version-tabs button {
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sd-version-tabs button.active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: var(--font-medium);
+}
+
+.sd-version-tabs button:hover:not(.active) {
+  background: var(--surface-soft);
+}
+
+/* Sections */
+.sd-section {
+  margin-top: 12px;
+}
+
+.sd-section:first-child {
+  margin-top: 0;
+}
+
+.sd-recap p {
+  margin: 0 0 0.8em;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-main);
+  text-indent: 2em;
+}
+
+.sd-recap p:last-child {
+  margin-bottom: 0;
+}
+
+.sd-section-title {
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sd-section-label {
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.sd-details > .sd-section-title {
+  list-style: none;
+}
+
+.sd-details > .sd-section-title::before {
+  content: '\25B8 ';
+  font-size: 10px;
+}
+
+.sd-details[open] > .sd-section-title::before {
+  content: '\25BE ';
+}
+
+.sd-details > .sd-section-title::-webkit-details-marker {
+  display: none;
+}
+
+.sd-moments,
+.sd-open-loops {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-main);
+}
+
+.sd-moments li,
+.sd-open-loops li {
+  margin-bottom: 6px;
+}
+
+.sd-moments li::marker {
+  color: var(--accent-text);
+}
+
+.sd-open-loops li::marker {
+  content: '\25CB ';
+  color: var(--text-muted);
+}
+
+/* Tags */
+.sd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sd-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.sd-tag-entity {
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface-soft));
+  color: var(--text-main);
+}
+
+/* Review note button */
+.sd-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sd-note-btn:hover {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+/* Review note popup */
+.sd-note-popup {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.sd-note-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+}
+
+.sd-note-popup-header button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.sd-note-popup-header button:hover {
+  color: var(--text-main);
+}
+
+.sd-review-note {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  padding: 10px 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Actions */
+.sd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sd-actions button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sd-actions button:hover {
+  color: var(--text-main);
+  background: var(--surface-soft);
+}
+
+.sd-approve-btn {
+  color: var(--accent-text) !important;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important;
+}
+
+.sd-approve-btn:hover {
+  background: var(--accent-soft) !important;
+}
+
+.sd-save-btn {
+  color: var(--accent-text) !important;
+  background: var(--accent-soft) !important;
+  border-color: transparent !important;
+  font-weight: var(--font-medium);
+}
+
+/* Editor */
+.sd-editor {
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px;
+  outline: none;
+  font-family: monospace;
+}
+
+.sd-editor:focus {
+  border-color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
+}
