@@ -248,7 +248,7 @@ export default function HandoffModal({ open, onClose }) {
                 autoFocus
               />
               <div className="handoff-editor-actions">
-                <span className="handoff-status">{statusText}</span>
+                <span className="handoff-status">{statusText || `${draft.length} 字`}</span>
                 <button
                   className="handoff-editor-btn"
                   onClick={() => {
@@ -275,6 +275,7 @@ export default function HandoffModal({ open, onClose }) {
               <div className="handoff-markdown">
                 <ReactMarkdown>{shown.content}</ReactMarkdown>
               </div>
+              <div className="handoff-word-count">{shown.content.length} 字</div>
             </>
           )}
         </div>
