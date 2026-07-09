@@ -9,6 +9,7 @@ after the stored access token expires.
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -18,7 +19,6 @@ HOME = Path(os.path.expanduser("~"))
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 AUTH_PATH = Path(os.environ.get("CODEX_AUTH_PATH", HOME / ".codex" / "auth.json"))
-CODEX_BIN = os.environ.get("CODEX_BIN", "codex")
 REFRESH_THRESHOLD_SECONDS = int(os.environ.get("CODEX_REFRESH_THRESHOLD_SECONDS", str(48 * 3600)))
 USAGE_READER = Path(os.environ.get("USAGE_READER_SCRIPT", SCRIPT_DIR / "usage_reader.py"))
 
@@ -65,11 +65,27 @@ def refresh_needed(exp):
     return False
 
 
+def codex_command():
+    configured = os.environ.get("CODEX_BIN")
+    candidates = [
+        configured,
+        shutil.which("codex"),
+        str(HOME / ".npm-global" / "bin" / "codex"),
+        "/usr/local/bin/codex",
+        "/usr/bin/codex",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return candidate
+    return configured or "codex"
+
+
 def run_codex_doctor():
+    command = codex_command()
     log("running codex doctor to refresh auth")
     try:
         result = subprocess.run(
-            [CODEX_BIN, "doctor"],
+            [command, "doctor"],
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
