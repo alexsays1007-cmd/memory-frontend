@@ -65,8 +65,8 @@ function hasMeaningfulTitle(session) {
   return !['untitled', '无标题'].includes(title.toLowerCase());
 }
 
-function getStreamKey(session) {
-  return [session.channel || session.source || 'unknown', session.thread_id || 'default'].join(':');
+function getCurrentChannelKey(session) {
+  return (session.channel || 'unknown').toLowerCase();
 }
 
 function supportsCurrentSession(session) {
@@ -113,6 +113,7 @@ export default function SessionPanel({
   currentExcludeThreadId,
 }) {
   const [sessions, setSessions] = useState([]);
+  const [currentScopeSessions, setCurrentScopeSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [historyLimits, setHistoryLimits] = useState({});
@@ -120,15 +121,59 @@ export default function SessionPanel({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setLoading(true);
-    getSessions({
+
+    const filteredParams = {
       channel: currentChannel || undefined,
       threadId: currentThreadId || undefined,
       excludeThreadId: currentExcludeThreadId || undefined,
-    })
-      .then(res => setSessions(res.sessions || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    };
+    const currentScopeParams = {
+      channel: currentChannel || undefined,
+    };
+    const filteredRequest = getSessions(filteredParams);
+    const needsUnfilteredCurrentScope = Boolean(currentThreadId || currentExcludeThreadId);
+    const currentScopeRequest = needsUnfilteredCurrentScope
+      ? getSessions(currentScopeParams)
+      : filteredRequest;
+
+    Promise.all([filteredRequest, currentScopeRequest])
+      .then(([filteredRes, currentScopeRes]) => {
+        if (cancelled) return;
+
+        const filteredSessions = filteredRes.sessions || [];
+        const fullSessions = currentScopeRes.sessions || [];
+        const fullById = new Map(fullSessions.map(session => [session.session, session]));
+
+        // DM/Group filters only narrow message rows and counts. Session labels and
+        // time ranges must still describe the full Telegram/Claude session.
+        const enrichedSessions = filteredSessions.map(session => {
+          const full = fullById.get(session.session);
+          if (!full) return session;
+          return {
+            ...session,
+            title: full.title || session.title,
+            first_created: full.first_created || session.first_created,
+            last_created: full.last_created || session.last_created,
+            agent: full.agent || session.agent,
+            source: full.source || session.source,
+          };
+        });
+
+        setSessions(enrichedSessions);
+        setCurrentScopeSessions(fullSessions);
+      })
+      .catch(err => {
+        if (!cancelled) console.error(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, currentChannel, currentThreadId, currentExcludeThreadId]);
 
   useEffect(() => {
@@ -157,19 +202,19 @@ export default function SessionPanel({
   }, [open, onClose]);
 
   const currentSessionIds = useMemo(() => {
-    const latestByStream = new Map();
+    const latestByChannel = new Map();
 
-    sessions.filter(supportsCurrentSession).forEach(session => {
-      const key = getStreamKey(session);
+    currentScopeSessions.filter(supportsCurrentSession).forEach(session => {
+      const key = getCurrentChannelKey(session);
       const activity = parseToLocalDate(session.last_created || session.first_created)?.getTime() || 0;
-      const current = latestByStream.get(key);
+      const current = latestByChannel.get(key);
       if (!current || activity > current.activity) {
-        latestByStream.set(key, { session: session.session, activity });
+        latestByChannel.set(key, { session: session.session, activity });
       }
     });
 
-    return new Set([...latestByStream.values()].map(item => item.session));
-  }, [sessions]);
+    return new Set([...latestByChannel.values()].map(item => item.session));
+  }, [currentScopeSessions]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return sessions;
