@@ -113,6 +113,17 @@ function ProviderCard({ provider }) {
           : 'reset time unknown'}
       />
 
+      {(provider.additionalLimits || []).map(limit => (
+        <UsageBar
+          key={limit.id || limit.label}
+          label={limit.label}
+          value={limit.usedPercent}
+          detail={limit.resetsInSeconds !== null && limit.resetsInSeconds !== undefined
+            ? `resets in ${formatCountdown(limit.resetsInSeconds)}`
+            : 'reset time unknown'}
+        />
+      ))}
+
       <div className={`pace-panel pace-${pace.status || 'unknown'}`}>
         <div className="pace-copy">
           <span>

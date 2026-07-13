@@ -68,10 +68,8 @@ function makePace(usedPercent, resetAt, limitWindowSeconds = 604800) {
 }
 
 
-function isWarning(session, weekly) {
-  const s = session?.used_percent;
-  const w = weekly?.used_percent;
-  return (typeof s === "number" && s >= 90) || (typeof w === "number" && w >= 90);
+function isWarning(...windows) {
+  return windows.some(window => typeof window?.used_percent === "number" && window.used_percent >= 90);
 }
 
 function mapSession(w) {
@@ -138,6 +136,30 @@ function mapWeekly(w, provider, limitWindowSeconds = 604800) {
   };
 }
 
+function mapAdditionalLimit(item) {
+  const window = item?.window;
+  if (!window) return null;
+  const sourceName = String(item.label || item.key || "Additional").trim();
+  const label = /fable/i.test(sourceName)
+    ? "Fable limits"
+    : `${sourceName.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase())} limits`;
+  const resetsAt = ts(window.reset_at);
+  return {
+    id: item.key || sourceName.toLowerCase().replace(/\s+/g, "-"),
+    label,
+    usedPercent: safeNum(window.used_percent),
+    resetsAt,
+    resetsInSeconds: resetsAt ? safeNum(window.reset_after_seconds) : null,
+  };
+}
+
+function codexWindows(raw) {
+  const windows = [raw.primary, raw.secondary].filter(window => window?.reset_at);
+  const weekly = windows.find(window => Number(window.limit_window_seconds) >= 6 * 86400) || null;
+  const session = windows.find(window => window !== weekly) || weekly;
+  return { session, weekly };
+}
+
 function mapClaude(raw) {
   if (!raw || !raw.available) {
     return {
@@ -146,12 +168,14 @@ function mapClaude(raw) {
       warning: false, error: raw?.error || "unavailable",
     };
   }
+  const additionalLimits = (raw.additional || []).map(mapAdditionalLimit).filter(Boolean);
   return {
     id: "claude", name: "Claude Code",
     available: true, stale: !!raw.stale,
     session: mapSession(raw.five_hour),
     weekly: mapWeekly(raw.seven_day, "claude"),
-    warning: isWarning(raw.five_hour, raw.seven_day),
+    additionalLimits,
+    warning: isWarning(raw.five_hour, raw.seven_day, ...(raw.additional || []).map(item => item.window)),
     error: raw.error || null,
   };
 }
@@ -164,14 +188,13 @@ function mapCodex(raw) {
       warning: false, error: raw?.error || "unavailable",
     };
   }
-  const primary = raw.primary || null;
-  const secondary = raw.secondary || null;
+  const { session, weekly } = codexWindows(raw);
   return {
     id: "codex", name: "Codex",
     available: true, stale: !!raw.stale,
-    session: mapSession(primary),
-    weekly: mapWeekly(secondary, "codex", secondary?.limit_window_seconds || 604800),
-    warning: isWarning(raw.primary, raw.secondary),
+    session: mapSession(session),
+    weekly: mapWeekly(weekly, "codex", weekly?.limit_window_seconds || 604800),
+    warning: isWarning(session, weekly),
     error: raw.error || null,
   };
 }

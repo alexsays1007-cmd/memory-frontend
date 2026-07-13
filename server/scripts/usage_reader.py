@@ -32,6 +32,20 @@ def _safe_int(v, default=0):
     except (TypeError, ValueError):
         return default
 
+
+def _codex_windows(codex):
+    """Return (session, weekly), tolerating Codex moving weekly into primary."""
+    windows = [
+        window for window in (codex.get("primary"), codex.get("secondary"))
+        if isinstance(window, dict) and window.get("reset_at")
+    ]
+    weekly = next(
+        (window for window in windows if _safe_int(window.get("limit_window_seconds")) >= 6 * 86400),
+        None,
+    )
+    session = next((window for window in windows if window is not weekly), None)
+    return session or weekly, weekly
+
 def _cycle_day(reset_at, limit_window_seconds=604800):
     """Compute day-of-cycle (1-7) from window reset_at and duration."""
     if not reset_at or reset_at <= 0:
@@ -450,6 +464,17 @@ class ClaudeRateLimitReader:
             return {"available": False, "error": "no_data"}
         updated_at = _safe_int(d.get("updated_at"))
         stale = updated_at <= 0 or (time.time() - updated_at) > self._max_age
+        additional = []
+        for item in (d.get("additional") or []):
+            if not isinstance(item, dict):
+                continue
+            window = _recompute(item.get("window"), drop_expired=True)
+            if window:
+                additional.append({
+                    "key": item.get("key") or "",
+                    "label": item.get("label") or "",
+                    "window": window,
+                })
         return {
             "available": True,
             "stale": stale,
@@ -457,6 +482,7 @@ class ClaudeRateLimitReader:
             "model": d.get("model") or "",
             "five_hour": _recompute(d.get("five_hour"), drop_expired=True),
             "seven_day": _recompute(d.get("seven_day"), drop_expired=True),
+            "additional": additional,
         }
 
 # ── combined ─────────────────────────────────────────────────
@@ -471,16 +497,17 @@ def get_all():
     if claude.get("available") and claude.get("seven_day"):
         _record_snapshot(history, "claude", claude["seven_day"].get("used_percent"),
                          claude["seven_day"].get("reset_at"), source=claude.get("source", "live"))
-    if codex.get("available") and codex.get("secondary"):
-        _record_snapshot(history, "codex", codex["secondary"].get("used_percent"),
-                         codex["secondary"].get("reset_at"), source=codex.get("source", "live"))
+    _, codex_weekly = _codex_windows(codex)
+    if codex.get("available") and codex_weekly:
+        _record_snapshot(history, "codex", codex_weekly.get("used_percent"),
+                         codex_weekly.get("reset_at"), source=codex.get("source", "live"))
 
     # Prune old cycles
     current_ras = {}
     if claude.get("available") and claude.get("seven_day", {}).get("reset_at"):
         current_ras["claude"] = [claude["seven_day"]["reset_at"]]
-    if codex.get("available") and codex.get("secondary", {}).get("reset_at"):
-        current_ras["codex"] = [codex["secondary"]["reset_at"]]
+    if codex.get("available") and codex_weekly and codex_weekly.get("reset_at"):
+        current_ras["codex"] = [codex_weekly["reset_at"]]
     _prune_history(history, current_ras)
 
     # Save once

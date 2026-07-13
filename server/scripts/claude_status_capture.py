@@ -65,12 +65,25 @@ def _extract_and_save(raw):
                 "reset_after_seconds": max(0, int(float(resets_at) - time.time())),
             }
 
+        additional = []
+        for key, value in rl.items():
+            if key in ("five_hour", "seven_day"):
+                continue
+            window = _win(value)
+            if window:
+                additional.append({
+                    "key": key,
+                    "label": value.get("label") or value.get("name") or value.get("model") or "",
+                    "window": window,
+                })
+
         payload = {
             "available": True,
             "updated_at": int(time.time()),
             "model": model,
             "five_hour": _win(rl.get("five_hour")),
             "seven_day": _win(rl.get("seven_day")),
+            "additional": additional,
         }
         tmp = OUT + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
