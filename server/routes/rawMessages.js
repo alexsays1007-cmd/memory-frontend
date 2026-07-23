@@ -492,6 +492,28 @@ router.patch('/summaries/:id/approve', requireMemoryWriteAccess, (req, res) => {
   }
 });
 
+function validateSummaryJson(jsonStr) {
+  let parsed;
+  try { parsed = JSON.parse(jsonStr); } catch (e) {
+    return { ok: false, error: `JSON 解析失败: ${e.message}` };
+  }
+  const errors = [];
+  if (typeof parsed.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date))
+    errors.push('date 必须是 YYYY-MM-DD 格式');
+  if (typeof parsed.recap !== 'string' || parsed.recap.length < 50)
+    errors.push(`recap 至少50字 (当前 ${parsed.recap?.length || 0})`);
+  if (!Array.isArray(parsed.moments) || parsed.moments.length < 2)
+    errors.push(`moments 至少2条 (当前 ${parsed.moments?.length || 0})`);
+  if (!Array.isArray(parsed.topics) || parsed.topics.length < 1)
+    errors.push(`topics 至少1条 (当前 ${parsed.topics?.length || 0})`);
+  if (!Array.isArray(parsed.entities) || parsed.entities.length < 1)
+    errors.push(`entities 至少1条 (当前 ${parsed.entities?.length || 0})`);
+  if (!Array.isArray(parsed.open_loops))
+    errors.push('open_loops 必须是数组');
+  if (errors.length > 0) return { ok: false, error: errors.join('; ') };
+  return { ok: true, parsed };
+}
+
 router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
   try {
     const id = Number.parseInt(req.params.id, 10);
@@ -512,6 +534,13 @@ router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
     const revisedSummary = typeof req.body?.revised_summary === 'string'
       ? req.body.revised_summary
       : null;
+
+    if (revisedSummary) {
+      const validation = validateSummaryJson(revisedSummary);
+      if (!validation.ok) {
+        return res.status(400).json({ error: `摘要校验不通过: ${validation.error}` });
+      }
+    }
 
     db.prepare('UPDATE message_summaries SET revised_summary = ?, review_status = ?, updated_at = ? WHERE id = ?')
       .run(revisedSummary, 'revised', nowIso(), id);
