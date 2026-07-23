@@ -172,16 +172,15 @@ export default function SummaryPage() {
   };
 
   const renderCard = (summary) => {
-    const showOriginal = viewOriginal[summary.id];
-    const rawContent = showOriginal
-      ? summary.original_summary
-      : (summary.revised_summary || summary.original_summary);
-    const parsed = parseSummaryJson(rawContent);
     const originalParsed = parseSummaryJson(summary.original_summary);
+    const revisedParsed = parseSummaryJson(summary.revised_summary);
+    const hasRevised = !!revisedParsed;
+    const showOriginal = viewOriginal[summary.id];
+    const parsed = (!showOriginal && hasRevised) ? revisedParsed : originalParsed;
+    const previewTopics = (revisedParsed?.topics?.length > 0 ? revisedParsed.topics : originalParsed?.topics) || [];
     const dateStr = originalParsed?.date || summary.start_created?.slice(0, 10) || '';
     const dateLabel = formatDayLabel(dateStr);
     const isOpen = !!expandedIds[summary.id];
-    const hasRevised = !!summary.revised_summary;
     const isEditing = editingId === summary.id;
 
     return (
@@ -189,9 +188,9 @@ export default function SummaryPage() {
         <button className="sd-card-header" onClick={() => toggleExpand(summary.id)}>
           <span className="sd-card-date">{dateLabel}</span>
           <span className="sd-card-meta">
-            {!isOpen && originalParsed?.topics?.length > 0 && (
+            {!isOpen && previewTopics.length > 0 && (
               <span className="sd-card-topics-preview">
-                {originalParsed.topics.slice(0, 3).join(' · ')}
+                {previewTopics.slice(0, 3).join(' · ')}
               </span>
             )}
             {summary.review_status === 'pending' && <span className="sd-status sd-status-pending">待审</span>}
