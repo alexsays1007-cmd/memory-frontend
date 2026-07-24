@@ -526,7 +526,7 @@ router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
       return res.status(404).json({ error: 'message_summaries table does not exist' });
     }
 
-    const existing = db.prepare('SELECT id FROM message_summaries WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT id, summary_kind, scope FROM message_summaries WHERE id = ?').get(id);
     if (!existing) {
       return res.status(404).json({ error: 'Summary not found' });
     }
@@ -535,7 +535,7 @@ router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
       ? req.body.revised_summary
       : null;
 
-    if (revisedSummary) {
+    if (revisedSummary && existing.summary_kind === 'daily' && existing.scope === 'riven_velvy') {
       const validation = validateSummaryJson(revisedSummary);
       if (!validation.ok) {
         return res.status(400).json({ error: `摘要校验不通过: ${validation.error}` });

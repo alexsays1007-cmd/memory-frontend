@@ -9,6 +9,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        headers: {
+          'x-authenticated-user-email': 'alexsays1007@gmail.com',
+        },
       },
     },
   },
