@@ -30,6 +30,20 @@ function summariesTableExists(db) {
   );
 }
 
+function sanitizeSummaryRow(row) {
+  if (!row) return row;
+  if (Buffer.isBuffer(row.original_summary)) {
+    row.original_summary = row.original_summary.toString('utf8');
+  }
+  if (Buffer.isBuffer(row.revised_summary)) {
+    row.revised_summary = row.revised_summary.toString('utf8');
+  }
+  if (Buffer.isBuffer(row.review_note)) {
+    row.review_note = row.review_note.toString('utf8');
+  }
+  return row;
+}
+
 function ensureReviewStatusColumn(db) {
   const cols = db.prepare("PRAGMA table_info(message_summaries)").all();
   if (!cols.some(c => c.name === 'review_status')) {
@@ -449,6 +463,7 @@ router.get('/summaries', (req, res) => {
         id DESC
     `).all(params);
 
+    summaries.forEach(sanitizeSummaryRow);
     res.json({ summaries });
   } catch (err) {
     console.error('Error fetching raw message summaries:', err);
@@ -485,6 +500,7 @@ router.patch('/summaries/:id/approve', requireMemoryWriteAccess, (req, res) => {
     db.prepare("UPDATE message_summaries SET review_status = 'approved', updated_at = ? WHERE id = ?")
       .run(nowIso(), id);
     const summary = db.prepare('SELECT * FROM message_summaries WHERE id = ?').get(id);
+    sanitizeSummaryRow(summary);
     res.json({ ok: true, summary });
   } catch (err) {
     console.error('Error approving summary:', err);
@@ -546,6 +562,7 @@ router.patch('/summaries/:id', requireMemoryWriteAccess, (req, res) => {
       .run(revisedSummary, 'revised', nowIso(), id);
 
     const summary = db.prepare('SELECT * FROM message_summaries WHERE id = ?').get(id);
+    sanitizeSummaryRow(summary);
     res.json({ ok: true, summary });
   } catch (err) {
     console.error('Error updating summary:', err);
