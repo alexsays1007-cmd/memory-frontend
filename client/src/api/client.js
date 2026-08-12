@@ -23,7 +23,9 @@ export async function fetchApi(endpoint, params = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const apiError = new Error(error.error || `HTTP ${response.status}`);
+    Object.assign(apiError, error, { status: response.status });
+    throw apiError;
   }
 
   return response.json();
@@ -44,7 +46,9 @@ export async function requestApi(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const apiError = new Error(error.error || `HTTP ${response.status}`);
+    Object.assign(apiError, error, { status: response.status });
+    throw apiError;
   }
 
   return response.json();

@@ -42,7 +42,10 @@ export function getHandoff() {
   return fetchApi('/handoff');
 }
 
-export async function getHandoffCurrent() {
+export async function getHandoffCurrent(source = 'telegram') {
+  if (source === 'wechat') {
+    return fetchApi('/handoff/wechat/current');
+  }
   try {
     return await fetchApi('/handoff/current');
   } catch {
@@ -50,13 +53,20 @@ export async function getHandoffCurrent() {
   }
 }
 
-export function getHandoffPrevious() {
-  return fetchApi('/handoff/previous');
+export function getHandoffPrevious(source = 'telegram') {
+  return fetchApi(source === 'wechat' ? '/handoff/wechat/previous' : '/handoff/previous');
 }
 
-export function updateHandoffCurrent(content) {
-  return requestApi('/handoff/current', {
+export function updateHandoffCurrent(source, content, options = {}) {
+  const endpoint = source === 'wechat' ? '/handoff/wechat/current' : '/handoff/current';
+  return requestApi(endpoint, {
     method: 'PUT',
-    body: { content },
+    body: {
+      content,
+      ...(source === 'wechat' ? {
+        expectedSha256: options.expectedSha256,
+        allowLargeRemoval: options.allowLargeRemoval === true,
+      } : {}),
+    },
   });
 }

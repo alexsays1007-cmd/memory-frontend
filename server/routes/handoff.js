@@ -6,6 +6,36 @@ import { requireMemoryWriteAccess } from '../middleware/writeAuth.js';
 
 const router = Router();
 
+function getWechatHandoffConfig() {
+  const baseUrl = (process.env.WECHAT_HANDOFF_API_URL || '').replace(/\/$/, '');
+  const token = process.env.WECHAT_HANDOFF_API_TOKEN || '';
+  if (!baseUrl || !token) {
+    throw new Error('WeChat handoff API is not configured');
+  }
+  return { baseUrl, token };
+}
+
+async function requestWechatHandoff(endpoint, options = {}) {
+  const { baseUrl, token } = getWechatHandoffConfig();
+  const response = await fetch(`${baseUrl}${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  const body = await response.json().catch(() => ({ error: 'Invalid response from WeChat handoff API' }));
+  if (!response.ok) {
+    const error = new Error(body.error || `WeChat handoff API returned ${response.status}`);
+    error.status = response.status;
+    error.body = body;
+    throw error;
+  }
+  return body;
+}
+
 function getHandoffPath() {
   return process.env.HANDOFF_PATH || path.join(process.env.HOME || '/home/claude', 'handoff.md');
 }
@@ -234,6 +264,50 @@ router.put('/current', requireMemoryWriteAccess, (req, res) => {
   } catch (err) {
     console.error('Error writing current handoff:', err);
     return res.status(500).json({ error: 'Failed to write current handoff' });
+  }
+});
+
+router.get('/wechat/current', async (req, res) => {
+  try {
+    return res.json(await requestWechatHandoff('/handoff/current'));
+  } catch (err) {
+    console.error('Error reading WeChat handoff:', err.message);
+    return res.status(err.status || 502).json({
+      error: err.status === 404 ? 'WeChat handoff not found' : 'Failed to read WeChat handoff',
+    });
+  }
+});
+
+router.get('/wechat/previous', async (req, res) => {
+  try {
+    return res.json(await requestWechatHandoff('/handoff/previous'));
+  } catch (err) {
+    console.error('Error reading previous WeChat handoff:', err.message);
+    return res.status(err.status || 502).json({
+      error: err.status === 404 ? 'Previous WeChat handoff not found' : 'Failed to read previous WeChat handoff',
+    });
+  }
+});
+
+router.put('/wechat/current', requireMemoryWriteAccess, async (req, res) => {
+  try {
+    const { content, expectedSha256, allowLargeRemoval = false } = req.body || {};
+    if (typeof content !== 'string' || typeof expectedSha256 !== 'string') {
+      return res.status(400).json({ error: 'Content and expectedSha256 are required' });
+    }
+    const result = await requestWechatHandoff('/handoff/current', {
+      method: 'PUT',
+      body: JSON.stringify({ content, expectedSha256, allowLargeRemoval }),
+    });
+    return res.json(result);
+  } catch (err) {
+    console.error('Error writing WeChat handoff:', err.message);
+    const status = err.status || 502;
+    return res.status(status).json({
+      error: err.body?.error || 'Failed to write WeChat handoff',
+      code: err.body?.code,
+      removedRatio: err.body?.removedRatio,
+    });
   }
 });
 
