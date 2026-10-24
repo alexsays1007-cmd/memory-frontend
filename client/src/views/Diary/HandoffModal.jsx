@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -61,6 +61,7 @@ export default function HandoffModal({ open, onClose }) {
   const [editing, setEditing] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
   const [statusText, setStatusText] = useState('');
+  const overlayPressRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -103,6 +104,8 @@ export default function HandoffModal({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
+      // Esc while an IME is composing only cancels the candidate, not the editor.
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Escape') {
         if (editing) {
           setEditing(false);
@@ -189,12 +192,23 @@ export default function HandoffModal({ open, onClose }) {
   const isMobile = window.innerWidth <= 600;
   const hasChanges = draft !== current.content;
 
+  // A drag that starts inside the card (e.g. selecting text) and ends on the
+  // overlay still fires click on the overlay, so require the press to start there too.
+  const handleOverlayMouseDown = (e) => {
+    overlayPressRef.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    const pressedOnOverlay = overlayPressRef.current;
+    overlayPressRef.current = false;
+    if (!pressedOnOverlay || e.target !== e.currentTarget) return;
+    if (editing && hasChanges) return;
+    onClose();
+  };
+
   const modal = (
-    <div className="handoff-overlay" onClick={onClose}>
-      <div
-        className={`handoff-modal ${isMobile ? 'handoff-sheet' : 'handoff-card'}`}
-        onClick={e => e.stopPropagation()}
-      >
+    <div className="handoff-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <div className={`handoff-modal ${isMobile ? 'handoff-sheet' : 'handoff-card'}`}>
         {isMobile && <div className="handoff-handle" />}
 
         <div className="handoff-header">
